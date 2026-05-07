@@ -1,0 +1,27 @@
+[project]
+name = "mosamatic3"
+version = "0.1.0"
+description = "Web-based tool for body composition analysis"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+authors = [{ name = "Brecheisen", email = "r.brecheisen@maastrichtuniversity.nl" }]
+
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.1",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+py-modules = ["models"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
