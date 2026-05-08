@@ -1,0 +1,1 @@
+docker build --no-cache -t brecheisen/mosamatic3:latest .
