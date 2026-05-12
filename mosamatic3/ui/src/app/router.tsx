@@ -6,7 +6,7 @@ import { ErrorPage } from './pages/errorpage'
 import { LoginPage } from './pages/auth/loginpage';
 import { RegistrationPage } from './pages/auth/registrationpage';
 import { HomePage } from './pages/homepage';
-// import { DataPage } from '../features/data/DataPage';
+import { DataPage } from './pages/data/datapage';
 // import { AnalysesHomePage } from '../features/analyses/AnalysesHomePage';
 // import { AnalysisTypePage } from '../features/analyses/AnalysisTypePage';
 // import { AnalysisRunCreatePage } from '../features/analyses/AnalysisRunCreatePage';
@@ -25,7 +25,7 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute />,
         children: [
           { path: 'home', element: <HomePage /> },
-          // { path: 'data', element: <DataPage /> },
+          { path: 'data', element: <DataPage /> },
           // { path: 'analyses', element: <AnalysesHomePage /> },
           // { path: 'analyses/:analysisType', element: <AnalysisTypePage /> },
           // { path: 'analyses/:analysisType/new', element: <AnalysisRunCreatePage /> },
