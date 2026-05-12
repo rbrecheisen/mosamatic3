@@ -1,13 +1,41 @@
 [project]
-name = "fastapi-react-template-backend"
+name = "mosamatic3"
 version = "0.1.0"
-description = "Small FastAPI REST API template with accounts, login, uploads, and SQLite persistence."
-requires-python = ">=3.11"
+description = "Web-based tool for body composition analysis and clinical decision support"
+requires-python = ">=3.11,<3.12"
 dependencies = [
+
+  # Packages Mosamatic BC analysis
+  "click",
+  "pydicom>=3.0.1",
+  "dicom2nifti>=2.6.2",
+  "numpy>=1.26.4",
+  "pandas>=2.3.2",
+  "nibabel>=5.3.2",
+  "openpyxl>=3.1.5",
+  "pendulum>=3.1.0",
+  "pillow>=11.3.0",
+  "python-gdcm>=3.0.26",
+  "scipy>=1.15.3",
+  "torch==2.5.1",
+  "torchvision>=0.20.1",
+  "torchsummary",
+  "tensorflow==2.15.*; platform_system == 'Linux'",
+  "tensorflow-intel==2.15.0; platform_system == 'Windows'",
+  "tensorflow-macos==2.15.0; platform_system == 'Darwin' and platform_machine == 'arm64'",
+  "tensorboard==2.15.2",
+  "tensorboard-data-server==0.7.2",
+  "tensorflow-io-gcs-filesystem==0.31.0; platform_system == 'Windows'",
+  "tensorflow-io-gcs-filesystem>=0.31.0; platform_system == 'Darwin' and platform_machine == 'arm64'",
+  "totalsegmentator>=2.11.0",
+  "simpleitk>=2.5.2", 
+  "matplotlib",
+
+  # Packages FastAPI
   "fastapi[standard]>=0.115.0",
   "sqlmodel>=0.0.22",
   "passlib[bcrypt]>=1.7.4",
-  "bcrypt>=4.0.1,<5",
+  "bcrypt==4.0.1",
   "python-jose[cryptography]>=3.3.0",
   "pydantic-settings>=2.6.0",
 ]

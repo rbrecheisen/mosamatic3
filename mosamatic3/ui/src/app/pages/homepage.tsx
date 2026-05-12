@@ -1,0 +1,30 @@
+// src/features/dashboard/HomePage.tsx
+import { Link } from 'react-router-dom';
+import { useAuth } from '../authcontext';
+
+export function HomePage() {
+  const { user } = useAuth();
+
+  return (
+    <section className="page">
+      <div className="card">
+        <p className="eyebrow">Welcome</p>
+        <h2>
+          Hello{user?.email ? `, ${user.email}` : ''}.
+        </h2>
+        <p className="muted">
+          You are logged in. From here you can upload data or start an analysis.
+        </p>
+        <div className="actions">
+          <Link className="button-like" to="/data">
+            Go to data
+          </Link>
+          &nbsp;
+          <Link className="button-like secondary" to="/analyses">
+            Go to analyses
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
