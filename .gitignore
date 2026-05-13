@@ -1,6 +1,6 @@
 sources.zip
-mosamatic3/server/data/app.db
 mosamatic3/server/data/uploads
+*.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
