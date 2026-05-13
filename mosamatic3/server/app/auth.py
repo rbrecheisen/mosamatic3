@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta, timezone
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlmodel import Session, select
-
 from .config import settings
 from .database import get_session
 from .models import User
@@ -51,7 +49,6 @@ def get_current_user(
             raise credentials_exception
     except JWTError as exc:
         raise credentials_exception from exc
-
     user = session.exec(select(User).where(User.email == email)).first()
     if user is None or not user.is_active:
         raise credentials_exception

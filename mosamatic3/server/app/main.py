@@ -1,12 +1,10 @@
 import shutil
 from uuid import UUID
 from pathlib import Path, PurePosixPath
-
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
-
 from .auth import authenticate_user, create_access_token, get_current_user, hash_password
 from .config import settings
 from .database import create_db_and_tables, get_session
@@ -47,7 +45,6 @@ def register(payload: UserCreate, session: Session = Depends(get_session)) -> Us
     existing = session.exec(select(User).where(User.email == payload.email)).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-
     user = User(email=payload.email, hashed_password=hash_password(payload.password))
     session.add(user)
     session.commit()
@@ -111,7 +108,6 @@ async def create_dataset(
         raise HTTPException(status_code=400, detail="Dataset name is required")
     if not files:
         raise HTTPException(status_code=400, detail="At least one file is required")
-
     existing = session.exec(
         select(Dataset).where(
             Dataset.owner_id == current_user.id,
@@ -120,25 +116,20 @@ async def create_dataset(
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="A dataset with this name already exists")
-
     dataset = Dataset(owner_id=current_user.id, name=dataset_name)
     session.add(dataset)
-
     dataset_upload_root = settings.upload_root / str(current_user.id) / str(dataset.id)
     dataset_upload_root.mkdir(parents=True, exist_ok=False)
-
     dataset_files: list[DatasetFile] = []
     for upload in files:
         relative_path = safe_relative_path(upload.filename or "uploaded_file")
         target_path = dataset_upload_root / relative_path
         target_path.parent.mkdir(parents=True, exist_ok=True)
-
         size_bytes = 0
         with target_path.open("wb") as out_file:
             while chunk := await upload.read(1024 * 1024):
                 size_bytes += len(chunk)
                 out_file.write(chunk)
-
         dataset_file = DatasetFile(
             dataset_id=dataset.id,
             relative_path=relative_path.as_posix(),
@@ -146,12 +137,10 @@ async def create_dataset(
         )
         session.add(dataset_file)
         dataset_files.append(dataset_file)
-
     session.commit()
     session.refresh(dataset)
     for dataset_file in dataset_files:
         session.refresh(dataset_file)
-
     return dataset_to_read(dataset, dataset_files)
 
 
@@ -165,7 +154,6 @@ def list_datasets(
         .where(Dataset.owner_id == current_user.id)
         .order_by(Dataset.created_at.desc())
     ).all()
-
     result: list[DatasetRead] = []
     for dataset in datasets:
         files = list(
@@ -191,20 +179,15 @@ def delete_dataset(
             Dataset.owner_id == current_user.id,
         )
     ).first()
-
     if dataset is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
-
     dataset_files = session.exec(
         select(DatasetFile).where(DatasetFile.dataset_id == dataset.id)
     ).all()
-
     for dataset_file in dataset_files:
         session.delete(dataset_file)
-
     session.delete(dataset)
     session.commit()
-
     dataset_upload_root = settings.upload_root / str(current_user.id) / str(dataset.id)
     shutil.rmtree(dataset_upload_root, ignore_errors=True)
 
