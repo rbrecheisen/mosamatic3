@@ -1,5 +1,3 @@
-// src/features/dashboard/HomePage.tsx
-import { Link } from 'react-router-dom';
 import { useAuth } from '../authcontext';
 
 export function HomePage() {
@@ -15,13 +13,6 @@ export function HomePage() {
         <p className="muted">
           You are logged in. From here you can upload data or start an analysis.
         </p>
-        <div className="actions">
-          <Link className="button-like" to="/data">Data</Link>
-          &nbsp;
-          <Link className="button-like secondary" to="/analyse">Analyze</Link>
-          &nbsp;
-          <Link className="button-like secondary" to="/report">Report</Link>
-        </div>
       </div>
     </section>
   );

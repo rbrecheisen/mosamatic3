@@ -1,4 +1,3 @@
-// src/app/router.tsx
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from './layout';
 import { ProtectedRoute } from './protectedroute';
@@ -26,9 +25,9 @@ export const router = createBrowserRouter([
         children: [
           { path: 'home', element: <HomePage /> },
           { path: 'data', element: <DataPage /> },
-          // { path: 'analyses', element: <AnalysesHomePage /> },
-          // { path: 'analyses/:analysisType', element: <AnalysisTypePage /> },
-          // { path: 'analyses/:analysisType/new', element: <AnalysisRunCreatePage /> },
+          // { path: 'analyze', element: <AnalysesHomePage /> },
+          // { path: 'analyze/:analysisType', element: <AnalysisTypePage /> },
+          // { path: 'analyze/:analysisType/new', element: <AnalysisRunCreatePage /> },
           // { path: 'runs/:runId', element: <AnalysisRunDetailPage /> },
         ],
       },

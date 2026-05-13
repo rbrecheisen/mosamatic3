@@ -1,36 +1,53 @@
 import { request } from './client';
 
-export type UploadedFile = {
-  path: string;
-  name: string;
-  size_bytes?: number;
-  is_directory: boolean;
-  created_at?: string;
+export type DatasetFile = {
+  id: string;
+  relative_path: string;
+  size_bytes: number;
+  created_at: string;
 };
 
-/**
- * Upload files or directories to the backend API.
- * @param files 
- * @returns 
- */
-export async function uploadFiles(files: FileList | File[]): Promise<{ saved_files: string[] }> {
+export type Dataset = {
+  id: string;
+  name: string;
+  created_at: string;
+  files: DatasetFile[];
+};
+
+export type DatasetSummary = {
+  id: string;
+  name: string;
+  created_at: string;
+  file_count: number;
+  total_size_bytes: number;
+};
+
+export async function uploadDataset(
+  name: string,
+  files: FileList | File[],
+): Promise<{ dataset: Dataset }> {
   const formData = new FormData();
+  formData.append('name', name);
+
   Array.from(files).forEach((file) => {
     const relativePath =
       (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
 
     formData.append('files', file, relativePath);
   });
-  return request<{ saved_files: string[] }>('/api/uploads', {
+
+  return request<{ dataset: Dataset }>('/api/datasets', {
     method: 'POST',
     body: formData,
   });
 }
 
-/**
- * Retrieve list of uploaded files and directories.
- * @returns JSON data describing files.
- */
-export async function listUploadedFiles(): Promise<UploadedFile[]> {
-  return request<UploadedFile[]>('/api/uploads');
+export async function listDatasets(): Promise<DatasetSummary[]> {
+  return request<DatasetSummary[]>('/api/datasets');
+}
+
+export async function deleteDataset(datasetId: string): Promise<void> {
+  await request<void>(`/api/datasets/${datasetId}`, {
+    method: 'DELETE',
+  });
 }
