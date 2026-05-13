@@ -160,3 +160,38 @@ td {
   border-bottom: 1px solid #e2e6f0;
   padding: 0.6rem;
 }
+
+.workflow-tabs {
+  display: flex;
+  width: 100%;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.workflow-tab {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 600;
+  color: #334155;
+  background: #ffffff;
+  border-right: 1px solid #d0d7de;
+}
+
+.workflow-tab:last-child {
+  border-right: none;
+}
+
+.workflow-tab:hover {
+  background: #adc0e9;
+}
+
+.workflow-tab-active {
+  background: #2563eb;
+  color: #ffffff;
+}

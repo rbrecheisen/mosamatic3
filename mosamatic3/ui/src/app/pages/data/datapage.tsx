@@ -14,7 +14,6 @@ function formatBytes(bytes: number): string {
 export function DataPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
-
   const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -41,39 +40,29 @@ export function DataPage() {
 
   async function handleFilesSelected(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files ?? []);
-
     // Reset input so selecting the same file(s) again still triggers onChange.
     event.target.value = '';
-
     if (selectedFiles.length === 0) {
       return;
     }
-
     const datasetName = window.prompt('Dataset name');
-
     if (!datasetName?.trim()) {
       setMessage('Upload cancelled: no dataset name entered.');
       return;
     }
-
     const normalizedName = datasetName.trim();
-
     const duplicate = datasets.some(
       (dataset) => dataset.name.toLowerCase() === normalizedName.toLowerCase(),
     );
-
     if (duplicate) {
       setMessage(`A dataset named "${normalizedName}" already exists.`);
       return;
     }
-
     setUploading(true);
     setMessage('Uploading...');
-
     try {
       await uploadDataset(normalizedName, selectedFiles);
       await refreshDatasets();
-
       setMessage(
         `Uploaded dataset "${normalizedName}"`,
       );
@@ -89,11 +78,8 @@ export function DataPage() {
     const confirmed = window.confirm(
       `Delete dataset "${dataset.name}" and all ${dataset.file_count} file(s)?`,
     );
-
     if (!confirmed) return;
-
     setMessage(`Deleting dataset "${dataset.name}"...`);
-
     try {
       await deleteDataset(dataset.id);
       setDatasets((current) => current.filter((item) => item.id !== dataset.id));
