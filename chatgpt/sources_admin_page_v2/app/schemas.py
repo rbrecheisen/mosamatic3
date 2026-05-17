@@ -1,6 +1,6 @@
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class UserCreate(BaseModel):
@@ -9,20 +9,6 @@ class UserCreate(BaseModel):
 
 
 class UserRead(BaseModel):
-    id: UUID
-    email: str
-    is_active: bool
-    is_admin: bool
-    created_at: datetime
-
-
-class AdminSummary(BaseModel):
-    user_count: int
-    dataset_count: int
-    dataset_file_count: int
-
-
-class AdminUserRead(BaseModel):
     id: UUID
     email: str
     is_active: bool
@@ -65,6 +51,19 @@ class DatasetRead(BaseModel):
     file_count: int
     total_size_bytes: int
     files: list[DatasetFileRead] = []
+
+class AdminSummary(BaseModel):
+    user_count: int
+    dataset_count: int
+    dataset_file_count: int
+
+
+class AdminUserRead(BaseModel):
+    id: UUID
+    email: str
+    is_active: bool
+    is_admin: bool
+    created_at: datetime
 
 
 class AdminDatasetRead(BaseModel):

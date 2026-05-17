@@ -71,10 +71,10 @@ export function Layout() {
 
           {user.is_admin && (
             <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  isActive ? 'workflow-tab workflow-tab-active' : 'workflow-tab'
-                }
+              to="/admin"
+              className={({ isActive }) =>
+                isActive ? 'workflow-tab workflow-tab-active' : 'workflow-tab'
+              }
             >
               Admin
             </NavLink>

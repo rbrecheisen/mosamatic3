@@ -10,8 +10,8 @@ services:
       UPLOAD_ROOT: ./data/uploads
       FRONTEND_ORIGIN: http://localhost:5173
     volumes:
-      - ./mosamatic3/server/data/admin_password.txt:/app/data/admin_password.txt:ro
       - server_data:/app/data
+      - ./mosamatic3/server/admin_password.txt:/app/data/admin_password.txt:ro
     ports:
       - "8000:8000"
 

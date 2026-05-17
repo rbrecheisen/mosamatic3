@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/app.db"
     upload_root: Path = Path("./data/uploads")
     frontend_origin: str = "http://localhost:5173"
-    admin_username: str = "admin"
+    admin_username: str = "user"
     admin_password_file: Path = Path("./data/admin_password.txt")
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

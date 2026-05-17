@@ -1,7 +1,7 @@
 import { request, setToken } from './client';
 
 export type User = {
-  id: number;
+  id: string;
   email: string;
   is_active: boolean;
   is_admin: boolean;

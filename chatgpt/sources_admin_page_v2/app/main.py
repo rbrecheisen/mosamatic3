@@ -5,11 +5,14 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, sta
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
-from .auth import authenticate_user, create_access_token, get_current_user, get_current_admin_user, hash_password
+from .auth import authenticate_user, create_access_token, get_current_admin_user, get_current_user, hash_password
 from .config import settings
 from .database import create_db_and_tables, engine, get_session
 from .models import Dataset, DatasetFile, FormSubmission, User
 from .schemas import (
+    AdminDatasetRead,
+    AdminSummary,
+    AdminUserRead,
     DatasetFileRead,
     DatasetRead,
     FormSubmissionCreate,
@@ -17,9 +20,6 @@ from .schemas import (
     Token,
     UserCreate,
     UserRead,
-    AdminSummary,
-    AdminDatasetRead,
-    AdminUserRead,
 )
 
 app = FastAPI(title=settings.app_name)
@@ -33,15 +33,22 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def on_startup() -> None:
+    create_db_and_tables()
+    ensure_admin_user()
+
+
 def read_admin_password() -> str:
     password_file = settings.admin_password_file
     if not password_file.exists():
-        # raise RuntimeError(...)
-        raise RuntimeError('File with admin password does not exist')
+        raise RuntimeError(
+            f"Admin password file does not exist: {password_file}. "
+            "Create it with the fixed admin password before starting the app."
+        )
     password = password_file.read_text(encoding="utf-8").strip()
     if not password:
-        # raise RuntimeError(...)
-        raise RuntimeError('Could not load admin password')
+        raise RuntimeError(f"Admin password file is empty: {password_file}")
     return password
 
 
@@ -65,12 +72,6 @@ def ensure_admin_user() -> None:
             admin.is_active = True
             session.add(admin)
         session.commit()
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    create_db_and_tables()
-    ensure_admin_user()
 
 
 @app.get("/api/health")
@@ -153,7 +154,6 @@ def admin_list_datasets(
             )
         )
     return result
-
 
 
 def safe_relative_path(filename: str) -> Path:

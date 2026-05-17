@@ -1,5 +1,6 @@
 sources.zip
 mosamatic3/server/data/uploads
+mosamatic3/server/data/admin_password.txt
 *.db
 
 # Byte-compiled / optimized / DLL files
