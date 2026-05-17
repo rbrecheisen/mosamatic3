@@ -25,6 +25,15 @@ export function Layout() {
       {user && (
         <nav className="workflow-tabs">
           <NavLink
+            to="/home"
+            className={({ isActive }) =>
+              isActive ? 'workflow-tab workflow-tab-active' : 'workflow-tab'
+            }
+          >
+            Home
+          </NavLink>
+
+          <NavLink
             to="/data"
             className={({ isActive }) =>
               isActive ? 'workflow-tab workflow-tab-active' : 'workflow-tab'
@@ -34,12 +43,12 @@ export function Layout() {
           </NavLink>
 
           <NavLink
-            to="/analyze"
+            to="/analysis"
             className={({ isActive }) =>
               isActive ? 'workflow-tab workflow-tab-active' : 'workflow-tab'
             }
           >
-            Analyze
+            Analysis
           </NavLink>
 
           <NavLink
@@ -48,7 +57,16 @@ export function Layout() {
               isActive ? 'workflow-tab workflow-tab-active' : 'workflow-tab'
             }
           >
-            Report
+            Reports
+          </NavLink>
+
+          <NavLink
+            to="/studies"
+            className={({ isActive }) =>
+              isActive ? 'workflow-tab workflow-tab-active' : 'workflow-tab'
+            }
+          >
+            Studies
           </NavLink>
         </nav>
       )}

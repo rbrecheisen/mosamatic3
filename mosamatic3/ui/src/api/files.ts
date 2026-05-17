@@ -25,18 +25,15 @@ export type DatasetSummary = {
 export async function uploadDataset(
   name: string,
   files: FileList | File[],
-): Promise<{ dataset: Dataset }> {
+): Promise<Dataset> {
   const formData = new FormData();
   formData.append('name', name);
-
   Array.from(files).forEach((file) => {
     const relativePath =
       (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
-
     formData.append('files', file, relativePath);
   });
-
-  return request<{ dataset: Dataset }>('/api/datasets', {
+  return request<Dataset>('/api/datasets', {
     method: 'POST',
     body: formData,
   });
@@ -44,6 +41,10 @@ export async function uploadDataset(
 
 export async function listDatasets(): Promise<DatasetSummary[]> {
   return request<DatasetSummary[]>('/api/datasets');
+}
+
+export async function getDataset(datasetId: string): Promise<Dataset> {
+  return request<Dataset>(`/api/datasets/${datasetId}`);
 }
 
 export async function deleteDataset(datasetId: string): Promise<void> {

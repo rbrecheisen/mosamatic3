@@ -167,6 +167,30 @@ def list_datasets(
     return result
 
 
+@app.get("/api/datasets/{dataset_id}", response_model=DatasetRead)
+def get_dataset(
+    dataset_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> DatasetRead:
+    dataset = session.exec(
+        select(Dataset).where(
+            Dataset.id == dataset_id,
+            Dataset.owner_id == current_user.id,
+        )
+    ).first()
+    if dataset is None:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    files = list(
+        session.exec(
+            select(DatasetFile)
+            .where(DatasetFile.dataset_id == dataset.id)
+            .order_by(DatasetFile.relative_path)
+        )
+    )
+    return dataset_to_read(dataset, files)
+
+
 @app.delete("/api/datasets/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_dataset(
     dataset_id: UUID,

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { DatasetSummary, listDatasets, uploadDataset, deleteDataset } from '../../../api/files';
 
@@ -154,7 +155,7 @@ export function DataPage() {
           <tbody>
             {datasets.map((dataset) => (
               <tr key={dataset.id}>
-                <td>{dataset.name}</td>
+                <td><Link to={`/data/${dataset.id}`}>{dataset.name}</Link></td>
                 <td>{dataset.file_count}</td>
                 <td>{formatBytes(dataset.total_size_bytes)}</td>
                 <td>{new Date(dataset.created_at).toLocaleString()}</td>

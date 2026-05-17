@@ -6,10 +6,7 @@ import { LoginPage } from './pages/auth/loginpage';
 import { RegistrationPage } from './pages/auth/registrationpage';
 import { HomePage } from './pages/homepage';
 import { DataPage } from './pages/data/datapage';
-// import { AnalysesHomePage } from '../features/analyses/AnalysesHomePage';
-// import { AnalysisTypePage } from '../features/analyses/AnalysisTypePage';
-// import { AnalysisRunCreatePage } from '../features/analyses/AnalysisRunCreatePage';
-// import { AnalysisRunDetailPage } from '../features/analyses/AnalysisRunDetailPage';
+import { DataDetailsPage } from './pages/data/datadetailspage';
 
 export const router = createBrowserRouter([
   {
@@ -25,9 +22,10 @@ export const router = createBrowserRouter([
         children: [
           { path: 'home', element: <HomePage /> },
           { path: 'data', element: <DataPage /> },
-          // { path: 'analyze', element: <AnalysesHomePage /> },
-          // { path: 'analyze/:analysisType', element: <AnalysisTypePage /> },
-          // { path: 'analyze/:analysisType/new', element: <AnalysisRunCreatePage /> },
+          { path: 'data/:datasetId', element: <DataDetailsPage /> },
+          // { path: 'analysis', element: <AnalysisHomePage /> },
+          // { path: 'analysis/:analysisType', element: <AnalysisTypePage /> },
+          // { path: 'analysis/:analysisType/new', element: <AnalysisRunCreatePage /> },
           // { path: 'runs/:runId', element: <AnalysisRunDetailPage /> },
         ],
       },

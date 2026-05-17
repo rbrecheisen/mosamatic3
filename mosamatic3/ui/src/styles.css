@@ -195,3 +195,13 @@ td {
   background: #2563eb;
   color: #ffffff;
 }
+
+.data-table a {
+  color: #3152d4;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.data-table a:hover {
+  text-decoration: underline;
+}
