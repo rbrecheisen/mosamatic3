@@ -8,7 +8,7 @@ export function Layout() {
     <main className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Body composition analysis and reporting</p>
+          <p className="eyebrow">Body composition analysis, reporting and studies</p>
           <h1>Mosamatic3</h1>
         </div>
 
