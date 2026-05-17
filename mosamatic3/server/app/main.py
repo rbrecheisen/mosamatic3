@@ -1,7 +1,8 @@
 import shutil
 from uuid import UUID
 from pathlib import Path, PurePosixPath
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from celery.result import AsyncResult
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
@@ -9,6 +10,8 @@ from .auth import authenticate_user, create_access_token, get_current_user, get_
 from .config import settings
 from .database import create_db_and_tables, engine, get_session
 from .models import Dataset, DatasetFile, FormSubmission, User
+from .tasks import demo_background_task
+from .processing import celery_app
 from .schemas import (
     DatasetFileRead,
     DatasetRead,
@@ -329,3 +332,32 @@ def list_form_submissions(
             .order_by(FormSubmission.created_at.desc())
         )
     )
+
+
+@app.post("/api/tasks/demo", status_code=status.HTTP_202_ACCEPTED)
+def start_demo_task(
+    seconds: int = Query(default=5, ge=1, le=300),
+    _: User = Depends(get_current_user),
+) -> dict[str, str]:
+    """Start a small Celery task to verify the background worker setup."""
+    task = demo_background_task.delay(seconds)
+    return {"task_id": task.id, "status": "queued"}
+
+
+@app.get("/api/tasks/{task_id}")
+def get_task_status(
+    task_id: str,
+    _: User = Depends(get_current_user),
+) -> dict[str, object]:
+    """Return Celery state/result metadata for a queued background task."""
+    result = AsyncResult(task_id, app=celery_app)
+    response: dict[str, object] = {"task_id": task_id, "state": result.state}
+    if result.state == "PENDING":
+        response["message"] = "Task is pending or unknown"
+    elif result.state == "FAILURE":
+        response["message"] = str(result.info)
+    elif isinstance(result.info, dict):
+        response.update(result.info)
+    elif result.ready():
+        response["result"] = result.result
+    return response
