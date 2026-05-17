@@ -70,6 +70,27 @@ def ensure_admin_user() -> None:
         session.commit()
 
 
+def get_admin_target_user(
+    user_id: UUID,
+    current_admin: User,
+    session: Session,
+) -> User:
+    target_user = session.get(User, user_id)
+    if target_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target_user.id == current_admin.id:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot modify your own admin account here",
+        )
+    if target_user.email == settings.admin_username:
+        raise HTTPException(
+            status_code=400,
+            detail="The built-in admin user cannot be modified here",
+        )
+    return target_user
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     create_db_and_tables()
@@ -157,6 +178,63 @@ def admin_list_datasets(
         )
     return result
 
+
+@app.patch("/api/admin/users/{user_id}/block", response_model=AdminUserRead)
+def admin_block_user(
+    user_id: UUID,
+    current_admin: User = Depends(get_current_admin_user),
+    session: Session = Depends(get_session),
+) -> User:
+    target_user = get_admin_target_user(user_id, current_admin, session)
+    target_user.is_active = False
+    session.add(target_user)
+    session.commit()
+    session.refresh(target_user)
+    return target_user
+
+
+@app.patch("/api/admin/users/{user_id}/unblock", response_model=AdminUserRead)
+def admin_unblock_user(
+    user_id: UUID,
+    current_admin: User = Depends(get_current_admin_user),
+    session: Session = Depends(get_session),
+) -> User:
+    target_user = get_admin_target_user(user_id, current_admin, session)
+    target_user.is_active = True
+    session.add(target_user)
+    session.commit()
+    session.refresh(target_user)
+    return target_user
+
+
+@app.delete("/api/admin/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_user(
+    user_id: UUID,
+    current_admin: User = Depends(get_current_admin_user),
+    session: Session = Depends(get_session),
+) -> None:
+    target_user = get_admin_target_user(user_id, current_admin, session)
+    datasets = session.exec(
+        select(Dataset).where(Dataset.owner_id == target_user.id)
+    ).all()
+    for dataset in datasets:
+        dataset_files = session.exec(
+            select(DatasetFile).where(DatasetFile.dataset_id == dataset.id)
+        ).all()
+        for dataset_file in dataset_files:
+            session.delete(dataset_file)
+        session.delete(dataset)
+        dataset_upload_root = (
+            settings.upload_root / str(target_user.id) / str(dataset.id)
+        )
+        shutil.rmtree(dataset_upload_root, ignore_errors=True)
+    form_submissions = session.exec(
+        select(FormSubmission).where(FormSubmission.owner_id == target_user.id)
+    ).all()
+    for form_submission in form_submissions:
+        session.delete(form_submission)
+    session.delete(target_user)
+    session.commit()
 
 
 def safe_relative_path(filename: str) -> Path:

@@ -34,3 +34,21 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
 export async function listAdminDatasets(): Promise<AdminDataset[]> {
   return request<AdminDataset[]>('/api/admin/datasets');
 }
+
+export async function blockAdminUser(userId: string): Promise<AdminUser> {
+  return request<AdminUser>(`/api/admin/users/${userId}/block`, {
+    method: 'PATCH',
+  });
+}
+
+export async function unblockAdminUser(userId: string): Promise<AdminUser> {
+  return request<AdminUser>(`/api/admin/users/${userId}/unblock`, {
+    method: 'PATCH',
+  });
+}
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  return request<void>(`/api/admin/users/${userId}`, {
+    method: 'DELETE',
+  });
+}

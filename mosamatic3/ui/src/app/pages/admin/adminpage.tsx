@@ -3,6 +3,9 @@ import {
   AdminDataset,
   AdminSummary,
   AdminUser,
+  blockAdminUser,
+  unblockAdminUser,
+  deleteAdminUser,
   getAdminSummary,
   listAdminDatasets,
   listAdminUsers,
@@ -26,25 +29,66 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getAdminSummary(), listAdminUsers(), listAdminDatasets()])
-      .then(([summaryResult, usersResult, datasetsResult]) => {
-        setSummary(summaryResult);
-        setUsers(usersResult);
-        setDatasets(datasetsResult);
-      })
-      .catch((error) => {
-        console.error(error);
-        setMessage(error instanceof Error ? error.message : 'Could not load admin data');
-      })
-      .finally(() => setLoading(false));
+    loadAdminData();
   }, []);
 
-  if (loading) {
-    return (
-      <section className="card">
-        <p className="muted">Loading admin page...</p>
-      </section>
+  async function loadAdminData() {
+    setLoading(true);
+    setMessage('');
+    try {
+      const [summaryResult, usersResult, datasetsResult] = await Promise.all([
+        getAdminSummary(),
+        listAdminUsers(),
+        listAdminDatasets(),
+      ]);
+      setSummary(summaryResult);
+      setUsers(usersResult);
+      setDatasets(datasetsResult);
+    } catch (error) {
+      console.error(error);
+      setMessage(error instanceof Error ? error.message : 'Could not load admin data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleBlockUser(user: AdminUser) {
+    if (!window.confirm(`Block user "${user.email}"?`)) return;
+    try {
+      await blockAdminUser(user.id);
+      await loadAdminData();
+      setMessage(`Blocked user "${user.email}".`);
+    } catch (error) {
+      console.error(error);
+      setMessage(error instanceof Error ? error.message : 'Could not block user');
+    }
+  }
+
+  async function handleUnblockUser(user: AdminUser) {
+    if (!window.confirm(`Unblock user "${user.email}"?`)) return;
+    try {
+      await unblockAdminUser(user.id);
+      await loadAdminData();
+      setMessage(`Unblocked user "${user.email}".`);
+    } catch (error) {
+      console.error(error);
+      setMessage(error instanceof Error ? error.message : 'Could not unblock user');
+    }
+  }
+
+  async function handleDeleteUser(user: AdminUser) {
+    const confirmed = window.confirm(
+      `Delete user "${user.email}"?\n\nThis also deletes their datasets, uploaded files and form data.`
     );
+    if (!confirmed) return;
+    try {
+      await deleteAdminUser(user.id);
+      await loadAdminData();
+      setMessage(`Deleted user "${user.email}".`);
+    } catch (error) {
+      console.error(error);
+      setMessage(error instanceof Error ? error.message : 'Could not delete user');
+    }
   }
 
   return (
@@ -79,17 +123,55 @@ export function AdminPage() {
             <th>Active</th>
             <th>Admin</th>
             <th>Created</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>{user.email}</td>
-              <td>{user.is_active ? 'yes' : 'no'}</td>
-              <td>{user.is_admin ? 'yes' : 'no'}</td>
-              <td>{new Date(user.created_at).toLocaleString()}</td>
-            </tr>
-          ))}
+          {users.map((user) => {
+            const isBuiltInAdmin = user.email === 'admin';
+            const canModifyUser = !user.is_admin && !isBuiltInAdmin;
+
+            return (
+              <tr key={user.id}>
+                <td>{user.email}</td>
+                <td>{user.is_active ? 'yes' : 'no'}</td>
+                <td>{user.is_admin ? 'yes' : 'no'}</td>
+                <td>{new Date(user.created_at).toLocaleString()}</td>
+                <td>
+                  <div className="row">
+                    {user.is_active ? (
+                      <button
+                        className="secondary"
+                        type="button"
+                        onClick={() => handleBlockUser(user)}
+                        disabled={!canModifyUser}
+                      >
+                        Block
+                      </button>
+                    ) : (
+                      <button
+                        className="secondary"
+                        type="button"
+                        onClick={() => handleUnblockUser(user)}
+                        disabled={!canModifyUser}
+                      >
+                        Unblock
+                      </button>
+                    )}
+
+                    <button
+                      className="danger"
+                      type="button"
+                      onClick={() => handleDeleteUser(user)}
+                      disabled={!canModifyUser}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

@@ -35,6 +35,27 @@ button.active {
   outline: 2px solid #3152d4;
 }
 
+button.danger {
+  background: #b42318;
+  color: white;
+  border-color: #b42318;
+}
+
+button.danger:hover:not(:disabled) {
+  background: #912018;
+  border-color: #912018;
+}
+
+button.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 input,
 select,
 textarea {
