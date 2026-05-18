@@ -7,7 +7,7 @@ celery_app = Celery(
     "mosamatic3",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks"],
+    include=["app.processing.tasks"],
 )
 
 celery_app.conf.update(

@@ -46,7 +46,7 @@ services:
       # - ./data/admin_password.txt:/app/data/admin_password.txt:ro
       - ./mosamatic3/server/data/admin_password.txt:/app/data/admin_password.txt:ro
       - server_data:/app/data
-    command: celery -A app.processing.celery_app worker --loglevel=info --pool=solo
+    command: celery -A app.processing.app.celery_app worker --loglevel=info --pool=solo
     depends_on:
       - redis
 

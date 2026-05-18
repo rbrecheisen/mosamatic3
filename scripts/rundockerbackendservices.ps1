@@ -1,2 +1,3 @@
 cd ..
-docker compose up redis worker
+docker compose up redis worker --build
+cd scripts
