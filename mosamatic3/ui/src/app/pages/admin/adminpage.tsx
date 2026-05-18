@@ -91,6 +91,8 @@ export function AdminPage() {
     }
   }
 
+  const usersById = new Map(users.map((user) => [user.id, user]));
+
   return (
     <section className="card">
       <p className="eyebrow">Admin</p>
@@ -180,7 +182,7 @@ export function AdminPage() {
         <thead>
           <tr>
             <th>Name</th>
-            <th>Owner id</th>
+            <th>Owner</th>
             <th>Files</th>
             <th>Total size</th>
             <th>Created</th>
@@ -190,7 +192,7 @@ export function AdminPage() {
           {datasets.map((dataset) => (
             <tr key={dataset.id}>
               <td>{dataset.name}</td>
-              <td>{dataset.owner_id}</td>
+              <td>{usersById.get(dataset.owner_id)?.email ?? `Unknown user (${dataset.owner_id})`}</td>
               <td>{dataset.file_count}</td>
               <td>{formatBytes(dataset.total_size_bytes)}</td>
               <td>{new Date(dataset.created_at).toLocaleString()}</td>
