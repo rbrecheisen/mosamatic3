@@ -29,12 +29,8 @@ services:
 
   worker:
     build: ./mosamatic3/server
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile.server
     container_name: mosamatic3-worker
     env_file:
-      # - .env.example
       - ./mosamatic3/server/.env.example
     environment:
       DATABASE_URL: sqlite:///./data/app.db
@@ -43,7 +39,6 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
-      # - ./data/admin_password.txt:/app/data/admin_password.txt:ro
       - ./mosamatic3/server/data/admin_password.txt:/app/data/admin_password.txt:ro
       - server_data:/app/data
     command: celery -A app.processing.app.celery_app worker --loglevel=info --pool=solo
