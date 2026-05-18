@@ -2,7 +2,7 @@ import shutil
 from uuid import UUID
 from fastapi import HTTPException
 from sqlmodel import Session, select
-from ..config import settings
+from ..config.config import settings
 from ..data.models import Dataset, DatasetFile, FormSubmission, User
 from ..data.schemas import AdminDatasetRead, AdminSummary
 

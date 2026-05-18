@@ -10,7 +10,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlmodel import Session, select
-from ..config import settings
+from ..config.config import settings
 from ..data.database import get_session
 from ..data.models import User
 from ..data.schemas import Token, UserCreate

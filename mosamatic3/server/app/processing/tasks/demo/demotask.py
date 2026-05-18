@@ -3,7 +3,7 @@ from typing import Any
 from ...app import celery_app
 
 
-@celery_app.task(bind=True, name="app.tasks.demo_background_task")
+@celery_app.task(bind=True, name="app.processing.tasks.demo.demo_task")
 def demo_task(self, seconds: int = 5) -> dict[str, Any]:
     total_steps = max(1, int(seconds))
     for step in range(total_steps):

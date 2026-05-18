@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 from .services.authservice import hash_password
-from .config import settings
+from .config.config import settings
 from .data.database import create_db_and_tables, engine
 from .data.models import User
 

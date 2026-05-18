@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .config import settings
-from .startup import on_startup
+from .config.config import settings
+from .mainstartup import on_startup
 from .routers import auth, admin, datasets, forms, tasks, health
 
 @asynccontextmanager

@@ -3,7 +3,7 @@ from pathlib import Path, PurePosixPath
 from uuid import UUID
 from fastapi import HTTPException, UploadFile
 from sqlmodel import Session, select
-from ..config import settings
+from ..config.config import settings
 from ..data.models import Dataset, DatasetFile, User
 from ..data.schemas import DatasetFileRead, DatasetRead
 
