@@ -19,10 +19,11 @@ export function HomePage() {
       setIsPollingTask(false);
       return;
     }
+    const activeTaskId = taskId;
     let cancelled = false;
     async function pollTaskStatus() {
       try {
-        const taskStatus = await getTaskStatus(taskId);
+        const taskStatus = await getTaskStatus(activeTaskId);
         if (cancelled) return;
         setTask(taskStatus);
         setMessage(`Demo task status: ${taskStatus.state}`);
@@ -36,7 +37,6 @@ export function HomePage() {
         setIsPollingTask(false);
       }
     }
-
     setIsPollingTask(true);
     pollTaskStatus();
     const intervalId = window.setInterval(pollTaskStatus, 1000);
