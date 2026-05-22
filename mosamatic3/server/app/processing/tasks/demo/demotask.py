@@ -1,7 +1,7 @@
 import time
 from typing import Any
 from ...app import celery_app
-from app.processing.tasks.demo.demo import run
+from app.processing.tasks.demo.demo import run_task
 
 
 @celery_app.task(bind=True, name="app.processing.tasks.demo.demotask")
@@ -16,7 +16,7 @@ def demotask(self, seconds: int = 5) -> dict[str, Any]:
                 "message": f"Processing step {step + 1} of {total_steps}",
             },
         )
-        run()
+        run_task()
     return {
         "current": total_steps,
         "total": total_steps,

@@ -1,11 +1,16 @@
 from celery.result import AsyncResult
 from ..processing.app import celery_app
 from ..processing.tasks.demo.demotask import demotask
+from ..processing.tasks.rescaledicomimages.rescaledicomimagestask import rescaledicomimagestask
 
 
-def start_demo_celery_task(seconds: int) -> dict[str, str]:
+def start_demotask(seconds: int) -> dict[str, str]:
     task = demotask.delay(seconds)
     return {"task_id": task.id, "status": "queued"}
+
+
+def start_rescaledicomimagestask() -> dict[str, str]:
+    task = rescaledicomimagestask.delay()
 
 
 def get_celery_task_status(task_id: str) -> dict[str, object]:
