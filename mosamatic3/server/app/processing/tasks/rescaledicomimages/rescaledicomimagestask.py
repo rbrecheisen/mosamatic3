@@ -1,11 +1,10 @@
 import time
 from typing import Any
 from ...app import celery_app
-from app.processing.tasks.demo.demo import run
 
 
-@celery_app.task(bind=True, name="app.processing.tasks.demo.demotask")
-def demotask(self, seconds: int = 5) -> dict[str, Any]:
+@celery_app.task(bind=True, name="app.processing.tasks.rescaledicomimages.task")
+def task(self, seconds: int = 5) -> dict[str, Any]:
     total_steps = max(1, int(seconds))
     for step in range(total_steps):
         self.update_state(
@@ -16,7 +15,7 @@ def demotask(self, seconds: int = 5) -> dict[str, Any]:
                 "message": f"Processing step {step + 1} of {total_steps}",
             },
         )
-        run()
+        time.sleep(1)
     return {
         "current": total_steps,
         "total": total_steps,

@@ -1,10 +1,10 @@
 from celery.result import AsyncResult
 from ..processing.app import celery_app
-from ..processing.tasks.demo.demotask import demo_task
+from ..processing.tasks.demo.demotask import demotask
 
 
 def start_demo_celery_task(seconds: int) -> dict[str, str]:
-    task = demo_task.delay(seconds)
+    task = demotask.delay(seconds)
     return {"task_id": task.id, "status": "queued"}
 
 
