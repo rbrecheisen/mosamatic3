@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getTaskStatus, startDemoTask, TaskStatusResponse } from '../../api/tasks';
 import { useAuth } from '../authcontext';
 
@@ -77,45 +78,8 @@ export function HomePage() {
           Hello{user?.email ? `, ${user.email}` : ''}.
         </h2>
         <p className="muted">
-          You are logged in. From here you can upload data or start an analysis.
+          You are logged in. From here you can upload <Link to="/data">data</Link> or start an <Link to="/analysis">analysis</Link>.
         </p>
-      </div>
-
-      <div className="card stack">
-        <div>
-          <p className="eyebrow">Background tasks</p>
-          <h3>Celery demo task</h3>
-          <p className="muted">
-            Starts the example FastAPI endpoint POST /api/tasks/demo?seconds=5 and polls the task status.
-          </p>
-        </div>
-
-        <div className="row">
-          <button type="button" onClick={handleStartDemoTask} disabled={buttonDisabled}>
-            {buttonText}
-          </button>
-        </div>
-
-        {message && <p className="message">{message}</p>}
-
-        {taskId && (
-          <p className="muted">
-            Task id: <code>{taskId}</code>
-          </p>
-        )}
-
-        {task && (
-          <div className="message">
-            <strong>Current status:</strong> {task.state}
-            {typeof task.current === 'number' && typeof task.total === 'number' && (
-              <span> — {task.current}/{task.total}</span>
-            )}
-            {task.message && <div>{task.message}</div>}
-            {task.result !== undefined && (
-              <pre>{JSON.stringify(task.result, null, 2)}</pre>
-            )}
-          </div>
-        )}
       </div>
     </section>
   );
