@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { DatasetSummary, listDatasets } from '../../../api/files';
 import { getTaskParameters, saveTaskParameters } from '../../../api/tasks';
 
 const TASK_NAMES: Record<string, string> = {
@@ -10,6 +11,8 @@ export function TaskParametersPage() {
   const { taskKey } = useParams();
   const navigate = useNavigate();
   const [seconds, setSeconds] = useState('5');
+  const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
+  const [selectedDatasetIds, setSelectedDatasetIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +30,22 @@ export function TaskParametersPage() {
         return;
       }
       try {
-        const savedParameters = await getTaskParameters(resolvedTaskKey);
+        const [savedParameters, availableDatasets] = await Promise.all([
+          getTaskParameters(resolvedTaskKey),
+          listDatasets(),
+        ]);
+        // const savedParameters = await getTaskParameters(resolvedTaskKey);
         if (cancelled) return;
+        setDatasets(availableDatasets);
         const savedSeconds = savedParameters.parameters.seconds;
         if (typeof savedSeconds === 'number' || typeof savedSeconds === 'string') {
           setSeconds(String(savedSeconds));
+        }
+        const savedDatasetIds = savedParameters.parameters.dataset_ids;
+        if (Array.isArray(savedDatasetIds)) {
+          setSelectedDatasetIds(
+            savedDatasetIds.filter((id): id is string => typeof id === 'string'),
+          );
         }
       } catch (loadError) {
         if (cancelled) return;
@@ -49,6 +63,22 @@ export function TaskParametersPage() {
     };
   }, [resolvedTaskKey]);
 
+  function handleDatasetSelect(datasetId: string) {
+    if (!datasetId) return;
+    setSelectedDatasetIds((currentIds) => {
+      if (currentIds.includes(datasetId)) {
+        return currentIds;
+      }
+      return [...currentIds, datasetId];
+    });
+  }
+
+  function removeSelectedDataset(datasetId: string) {
+    setSelectedDatasetIds((currentIds) =>
+      currentIds.filter((id) => id !== datasetId),
+    );
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!resolvedTaskKey) {
@@ -62,6 +92,7 @@ export function TaskParametersPage() {
       if (resolvedTaskKey === 'demo') {
         parameters = {
           seconds: Number(seconds),
+          dataset_ids: selectedDatasetIds,
         }
       } else {
         setError(`No parameter form has been configured for task ${resolvedTaskKey}.`);
@@ -95,17 +126,60 @@ export function TaskParametersPage() {
       ) : (
         <form className="stack" onSubmit={handleSubmit}>
           {resolvedTaskKey === 'demo' && (
-            <label>
-              Seconds
-              <input
-                type="number"
-                min="1"
-                max="300"
-                value={seconds}
-                onChange={(event) => setSeconds(event.target.value)}
-                required
-              />
-            </label>
+            <>
+              <label>
+                Seconds
+                <input
+                  type="number"
+                  min="1"
+                  max="300"
+                  value={seconds}
+                  onChange={(event) => setSeconds(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Add dataset
+                <select
+                  value=""
+                  onChange={(event) => handleDatasetSelect(event.target.value)}
+                >
+                  <option value="">Select a dataset...</option>
+                  {datasets
+                    .filter((dataset) => !selectedDatasetIds.includes(dataset.id))
+                    .map((dataset) => (
+                      <option key={dataset.id} value={dataset.id}>
+                        {dataset.name} ({dataset.file_count} files)
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {selectedDatasetIds.length > 0 && (
+                <div className="stack">
+                  <strong>Selected datasets</strong>
+                  {selectedDatasetIds.map((datasetId) => {
+                    const dataset = datasets.find((item) => item.id === datasetId);
+                    return (
+                      <div key={datasetId} className="row">
+                        <span>
+                          {dataset?.name ?? datasetId}
+                          {dataset && (
+                            <span className="muted"> — {dataset.file_count} files</span>
+                          )}
+                        </span>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => removeSelectedDataset(datasetId)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
           {!hasConfiguredForm && (
               <p className="message">
