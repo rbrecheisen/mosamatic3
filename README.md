@@ -1,4 +1,4 @@
-# FastAPI + React Template App
+# Mosamatic3
 
 Small starter project with:
 

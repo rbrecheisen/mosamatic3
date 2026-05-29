@@ -1,3 +1,4 @@
+from typing import Any
 from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, EmailStr
@@ -74,3 +75,17 @@ class AdminDatasetRead(BaseModel):
     created_at: datetime
     file_count: int
     total_size_bytes: int
+
+
+class TaskParametersSave(BaseModel):
+    task_key: str
+    parameters: dict[str, Any]
+
+
+class TaskParametersRead(BaseModel):
+    task_key: str
+    parameters: dict[str, Any]
+    is_valid: bool
+    error_message: str | None = None
+    exists: bool = True
+    updated_at: datetime | None = None

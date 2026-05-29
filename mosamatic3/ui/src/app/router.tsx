@@ -8,6 +8,7 @@ import { HomePage } from './pages/homepage';
 import { DataPage } from './pages/data/datapage';
 import { DataDetailsPage } from './pages/data/datadetailspage';
 import { AnalysisPage } from './pages/analysis/analysispage';
+import { TaskParametersPage } from './pages/analysis/taskparameterspage';
 import { AdminRoute } from './adminroute';
 import { AdminPage } from './pages/admin/adminpage';
 
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
           { path: 'data', element: <DataPage /> },
           { path: 'data/:datasetId', element: <DataDetailsPage /> },
           { path: 'analysis', element: <AnalysisPage /> },
+          { path: 'analysis/:taskKey/parameters', element: <TaskParametersPage /> },
           {
             element: <AdminRoute />,
             children: [

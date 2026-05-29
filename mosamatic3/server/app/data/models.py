@@ -1,6 +1,7 @@
+from typing import Any
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
-from sqlmodel import Field, SQLModel, UniqueConstraint
+from sqlmodel import Field, SQLModel, UniqueConstraint, Column, JSON
 
 
 def utc_now() -> datetime:
@@ -30,6 +31,18 @@ class DatasetFile(SQLModel, table=True):
     relative_path: str
     size_bytes: int
     created_at: datetime = Field(default_factory=utc_now)
+
+
+class TaskParameters(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("owner_id", "task_key", name="uq_task_parameters_owner_task"),)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    owner_id: UUID = Field(index=True, foreign_key="user.id")
+    task_key: str = Field(index=True)
+    parameters: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    is_valid: bool = True
+    error_message: str | None = None
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class FormSubmission(SQLModel, table=True):
