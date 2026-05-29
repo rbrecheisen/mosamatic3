@@ -14,5 +14,5 @@ $itemsToInclude = @(
     "mosamatic3\ui\vite.config.ts",
     "docker-compose.yml"
 )
-Set-Location $root
+Set-Location $root\scripts
 Compress-Archive -Path $itemsToInclude -DestinationPath $zipFilePath -Force
