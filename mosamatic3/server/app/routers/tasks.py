@@ -17,19 +17,19 @@ from ..services.taskservice import (
 router = APIRouter()
 
 
-@router.post("/demo", status_code=status.HTTP_202_ACCEPTED)
-def demotask(
-    seconds: int = Query(default=5, ge=1, le=300),
-    _: User = Depends(get_current_user),
-) -> dict[str, str]:
-    return start_demotask(seconds)
+# @router.post("/demo", status_code=status.HTTP_202_ACCEPTED)
+# def demotask(
+#     seconds: int = Query(default=5, ge=1, le=300),
+#     _: User = Depends(get_current_user),
+# ) -> dict[str, str]:
+#     return start_demotask(seconds)
 
 
-@router.post("/rescaledicomimages", status_code=status.HTTP_202_ACCEPTED)
-def rescaledicomimagestask(
-    _: User = Depends(get_current_user),
-) -> dict[str, str]:
-    return start_rescaledicomimagestask()
+# @router.post("/rescaledicomimages", status_code=status.HTTP_202_ACCEPTED)
+# def rescaledicomimagestask(
+#     _: User = Depends(get_current_user),
+# ) -> dict[str, str]:
+#     return start_rescaledicomimagestask()
 
 
 @router.get("/{task_key}/parameters", response_model=TaskParametersRead)

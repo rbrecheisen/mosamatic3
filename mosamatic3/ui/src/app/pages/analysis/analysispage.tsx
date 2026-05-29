@@ -15,7 +15,7 @@ type AvailableTask = {
 const AVAILABLE_TASKS: AvailableTask[] = [
   {
     id: 'demo',
-    name: 'Demo task',
+    name: 'Demo',
   },
 ];
 

@@ -3,20 +3,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getTaskParameters, saveTaskParameters } from '../../../api/tasks';
 
 const TASK_NAMES: Record<string, string> = {
-  demo: 'Demo task',
+  demo: 'Demo',
 };
 
 export function TaskParametersPage() {
   const { taskKey } = useParams();
   const navigate = useNavigate();
-
   const [seconds, setSeconds] = useState('5');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const resolvedTaskKey = taskKey ?? '';
   const taskName = TASK_NAMES[resolvedTaskKey] ?? resolvedTaskKey;
+  const hasConfiguredForm = Object.keys(TASK_NAMES).includes(resolvedTaskKey);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,20 +26,15 @@ export function TaskParametersPage() {
         setLoading(false);
         return;
       }
-
       try {
         const savedParameters = await getTaskParameters(resolvedTaskKey);
-
         if (cancelled) return;
-
         const savedSeconds = savedParameters.parameters.seconds;
-
         if (typeof savedSeconds === 'number' || typeof savedSeconds === 'string') {
           setSeconds(String(savedSeconds));
         }
       } catch (loadError) {
         if (cancelled) return;
-
         console.error(loadError);
         setError(loadError instanceof Error ? loadError.message : 'Could not load task parameters');
       } finally {
@@ -49,9 +43,7 @@ export function TaskParametersPage() {
         }
       }
     }
-
     loadSavedParameters();
-
     return () => {
       cancelled = true;
     };
@@ -59,23 +51,27 @@ export function TaskParametersPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!resolvedTaskKey) {
       setError('Missing task key.');
       return;
     }
-
     setSaving(true);
     setError(null);
-
     try {
+      let parameters: Record<string, unknown>;
+      if (resolvedTaskKey === 'demo') {
+        parameters = {
+          seconds: Number(seconds),
+        }
+      } else {
+        setError(`No parameter form has been configured for task ${resolvedTaskKey}.`);
+        setSaving(false);
+        return;
+      }
       await saveTaskParameters(resolvedTaskKey, {
         task_key: resolvedTaskKey,
-        parameters: {
-          seconds: Number(seconds),
-        },
+        parameters: parameters,
       });
-
       navigate('/analysis');
     } catch (saveError) {
       console.error(saveError);
@@ -94,12 +90,11 @@ export function TaskParametersPage() {
           Configure the parameters for this task. Saving validates the parameters on the server.
         </p>
       </div>
-
       {loading ? (
         <p className="muted">Loading parameters...</p>
       ) : (
         <form className="stack" onSubmit={handleSubmit}>
-          {resolvedTaskKey === 'demo' ? (
+          {resolvedTaskKey === 'demo' && (
             <label>
               Seconds
               <input
@@ -111,19 +106,17 @@ export function TaskParametersPage() {
                 required
               />
             </label>
-          ) : (
-            <p className="message">
-              No parameter form has been configured for task <code>{resolvedTaskKey}</code>.
+          )}
+          {!hasConfiguredForm && (
+              <p className="message">
+                No parameter form has been configured for task <code>{resolvedTaskKey}</code>.
             </p>
           )}
-
           {error && <p className="message">{error}</p>}
-
           <div className="row">
-            <button type="submit" disabled={saving || resolvedTaskKey !== 'demo'}>
+            <button type="submit" disabled={saving || !hasConfiguredForm}>
               {saving ? 'Saving...' : 'Save parameters'}
             </button>
-
             <button type="button" className="secondary" onClick={() => navigate('/analysis')}>
               Cancel
             </button>
