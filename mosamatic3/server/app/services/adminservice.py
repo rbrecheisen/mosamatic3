@@ -58,11 +58,22 @@ def list_admin_datasets(session: Session) -> list[AdminDatasetRead]:
       AdminDatasetRead(
         id=dataset.id,
         name=dataset.name,
+        kind=dataset.kind,
+        source_task_key=dataset.source_task_key,
+        source_task_id=dataset.source_task_id,
         owner_id=dataset.owner_id,
         created_at=dataset.created_at,
         file_count=len(files),
         total_size_bytes=sum(file.size_bytes for file in files),
       )
+      # AdminDatasetRead(
+      #   id=dataset.id,
+      #   name=dataset.name,
+      #   owner_id=dataset.owner_id,
+      #   created_at=dataset.created_at,
+      #   file_count=len(files),
+      #   total_size_bytes=sum(file.size_bytes for file in files),
+      # )
     )
   return result
 

@@ -90,6 +90,49 @@ export function DataPage() {
     }
   }
 
+  const inputDatasets = datasets.filter((dataset) => dataset.kind !== 'output');
+  const outputDatasets = datasets.filter((dataset) => dataset.kind === 'output');
+
+  function renderDatasetTable(items: DatasetSummary[]) {
+    if (items.length === 0) {
+      return <p className="muted">No datasets found.</p>;
+    }
+    return (
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Files</th>
+            <th>Total size</th>
+            <th>Created</th>
+            <th>Source</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((dataset) => (
+            <tr key={dataset.id}>
+              <td><Link to={`/data/${dataset.id}`}>{dataset.name}</Link></td>
+              <td>{dataset.file_count}</td>
+              <td>{formatBytes(dataset.total_size_bytes)}</td>
+              <td>{new Date(dataset.created_at).toLocaleString()}</td>
+              <td>
+                {dataset.kind === 'output'
+                  ? dataset.source_task_key ?? 'Task output'
+                  : 'Uploaded'}
+              </td>
+              <td>
+                <button type="button" onClick={() => handleDeleteDataset(dataset)}>
+                  delete
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
   return (
     <section className="card">
       <h2>Upload files or folders</h2>
@@ -137,35 +180,44 @@ export function DataPage() {
 
       {message && <p className="message">{message}</p>}
 
-      <h3>Datasets</h3>
+      <h3>Input datasets</h3>
 
-      {datasets.length === 0 ? (
-        <p className="muted">No datasets uploaded yet.</p>
+      {inputDatasets.length === 0 ? (
+        <p className="muted">No input datasets uploaded yet.</p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Files</th>
-              <th>Total size</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {datasets.map((dataset) => (
-              <tr key={dataset.id}>
-                <td><Link to={`/data/${dataset.id}`}>{dataset.name}</Link></td>
-                <td>{dataset.file_count}</td>
-                <td>{formatBytes(dataset.total_size_bytes)}</td>
-                <td>{new Date(dataset.created_at).toLocaleString()}</td>
-                <td>
-                  <button type='button' onClick={() => handleDeleteDataset(dataset)}>delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        renderDatasetTable(inputDatasets)
+        // <table className="data-table">
+        //   <thead>
+        //     <tr>
+        //       <th>Name</th>
+        //       <th>Files</th>
+        //       <th>Total size</th>
+        //       <th>Created</th>
+        //       <th>Actions</th>
+        //     </tr>
+        //   </thead>
+        //   <tbody>
+        //     {datasets.map((dataset) => (
+        //       <tr key={dataset.id}>
+        //         <td><Link to={`/data/${dataset.id}`}>{dataset.name}</Link></td>
+        //         <td>{dataset.file_count}</td>
+        //         <td>{formatBytes(dataset.total_size_bytes)}</td>
+        //         <td>{new Date(dataset.created_at).toLocaleString()}</td>
+        //         <td>
+        //           <button type='button' onClick={() => handleDeleteDataset(dataset)}>delete</button>
+        //         </td>
+        //       </tr>
+        //     ))}
+        //   </tbody>
+        // </table>
+      )}
+
+      <h3>Output results</h3>
+
+      {outputDatasets.length === 0 ? (
+        <p className="muted">No output results yet. Run an analysis task to generate output datasets.</p>
+      ) : (
+        renderDatasetTable(outputDatasets)
       )}
     </section>
   );

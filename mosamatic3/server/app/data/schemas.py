@@ -59,18 +59,42 @@ class DatasetFileRead(BaseModel):
   created_at: datetime
 
 
+# class DatasetRead(BaseModel):
+#   id: UUID
+#   name: str
+#   created_at: datetime
+#   file_count: int
+#   total_size_bytes: int
+#   files: list[DatasetFileRead] = []
+
+
 class DatasetRead(BaseModel):
   id: UUID
   name: str
+  kind: str
+  source_task_key: str | None = None
+  source_task_id: str | None = None
   created_at: datetime
   file_count: int
   total_size_bytes: int
   files: list[DatasetFileRead] = []
 
 
+# class AdminDatasetRead(BaseModel):
+#   id: UUID
+#   name: str
+#   owner_id: UUID
+#   created_at: datetime
+#   file_count: int
+#   total_size_bytes: int
+
+
 class AdminDatasetRead(BaseModel):
   id: UUID
   name: str
+  kind: str
+  source_task_key: str | None = None
+  source_task_id: str | None = None
   owner_id: UUID
   created_at: datetime
   file_count: int

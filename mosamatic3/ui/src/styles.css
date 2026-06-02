@@ -160,6 +160,17 @@ label {
   margin: 0;
 }
 
+.page-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header-row h2 {
+  margin: 0;
+}
+
 .selected-dataset-row {
   display: flex;
   align-items: center;

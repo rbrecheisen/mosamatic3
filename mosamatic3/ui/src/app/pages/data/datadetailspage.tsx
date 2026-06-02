@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Dataset, getDataset } from '../../../api/files';
+import { Dataset, downloadDataset, getDataset } from '../../../api/files';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -15,6 +15,8 @@ function formatBytes(bytes: number): string {
 export function DataDetailsPage() {
   const { datasetId } = useParams<{ datasetId: string }>();
   const [dataset, setDataset] = useState<Dataset | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -51,16 +53,50 @@ export function DataDetailsPage() {
     );
   }
 
+  async function handleDownloadDataset() {
+    if (!dataset) {
+      return;
+    }
+    setDownloadError(null);
+    setIsDownloading(true);
+    try {
+      await downloadDataset(dataset.id);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : 'Failed to download dataset');
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
   const totalSizeBytes = dataset.files.reduce((sum, file) => sum + file.size_bytes, 0);
 
   return (
     <section className="card">
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <div>
-          <h2>{dataset.name}</h2>
+          {/* <h2>{dataset.name}</h2> */}
+          <div className="page-header-row">
+            <h2>{dataset.name}</h2>
+            <button
+              type="button"
+              onClick={handleDownloadDataset}
+              disabled={isDownloading}
+            >
+              {isDownloading ? 'Preparing ZIP...' : 'Download ZIP'}
+            </button>
+          </div>
+          {downloadError && <p className="error">{downloadError}</p>}
           <p className="muted">
             {dataset.files.length} file(s), {formatBytes(totalSizeBytes)} total, created{' '}
             {new Date(dataset.created_at).toLocaleString()}
+            <br />
+            Type: {dataset.kind === 'output' ? 'Output result' : 'Input dataset'}
+            {dataset.source_task_key && (
+              <>
+                <br />
+                Created by task: {dataset.source_task_key}
+              </>
+            )}
           </p>
         </div>
 
