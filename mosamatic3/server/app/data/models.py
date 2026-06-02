@@ -17,14 +17,6 @@ class User(SQLModel, table=True):
   created_at: datetime = Field(default_factory=utc_now)
 
 
-# class Dataset(SQLModel, table=True):
-#   __table_args__ = (UniqueConstraint("owner_id", "name", name="uq_dataset_owner_name"),)
-#   id: UUID = Field(default_factory=uuid4, primary_key=True)
-#   owner_id: UUID = Field(index=True, foreign_key="user.id")
-#   name: str = Field(index=True)
-#   created_at: datetime = Field(default_factory=utc_now)
-
-
 class Dataset(SQLModel, table=True):
   __table_args__ = (UniqueConstraint("owner_id", "name", name="uq_dataset_owner_name"),)
   id: UUID = Field(default_factory=uuid4, primary_key=True)

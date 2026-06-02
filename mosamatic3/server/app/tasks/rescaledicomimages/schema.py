@@ -10,15 +10,6 @@ class RescaleDicomImagesTaskParameters(BaseModel):
       "ui_widget": "dataset_select",
     },
   )
-  dataset_ids: list[UUID] = Field(
-    default_factory=list,
-    min_length=1,
-    title="Datasets",
-    description="Multiple datasets containing the DICOM files to rescale",
-    json_schema_extra={
-      "ui_widget": "dataset_multi_select",
-    },
-  )
   target_size: int = Field(
     default=512,
     title="Target size",

@@ -2,7 +2,6 @@ import shutil
 import zipfile
 from io import BytesIO
 from dataclasses import dataclass
-from typing import Any
 from pathlib import Path, PurePosixPath
 from uuid import UUID
 from fastapi import HTTPException, UploadFile
@@ -24,25 +23,6 @@ def safe_relative_path(filename: str) -> Path:
   if not parts or any(part == ".." for part in parts):
     raise HTTPException(status_code=400, detail=f"Unsafe filename: {filename}")
   return Path(*parts)
-
-
-# def dataset_to_read(dataset: Dataset, files: list[DatasetFile]) -> DatasetRead:
-#   return DatasetRead(
-#     id=dataset.id,
-#     name=dataset.name,
-#     created_at=dataset.created_at,
-#     file_count=len(files),
-#     total_size_bytes=sum(file.size_bytes for file in files),
-#     files=[
-#       DatasetFileRead(
-#         id=file.id,
-#         relative_path=file.relative_path,
-#         size_bytes=file.size_bytes,
-#         created_at=file.created_at,
-#       )
-#       for file in files
-#     ],
-#   )
 
 
 def dataset_to_read(dataset: Dataset, files: list[DatasetFile]) -> DatasetRead:
