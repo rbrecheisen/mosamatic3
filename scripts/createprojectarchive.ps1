@@ -16,3 +16,5 @@ $itemsToInclude = @(
 )
 Set-Location $root
 Compress-Archive -Path $itemsToInclude -DestinationPath $zipFilePath -Force
+
+cd scripts

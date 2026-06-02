@@ -1,5 +1,11 @@
 import { request } from './client';
 
+export type AvailableTask = {
+  id: string;
+  name: string;
+  description?: string | null;
+};
+
 export type StartTaskResponse = {
   task_id: string;
   status: string;
@@ -27,6 +33,63 @@ export type SaveTaskParametersPayload = {
   task_key: string;
   parameters: Record<string, unknown>;
 };
+
+// export type TaskParameterJsonSchemaProperty = {
+//   title?: string;
+//   description?: string;
+//   type?: string;
+//   format?: string;
+//   default?: unknown;
+//   enum?: unknown[];
+//   minimum?: number;
+//   maximum?: number;
+//   exclusiveMinimum?: number;
+//   exclusiveMaximum?: number;
+//   minLength?: number;
+//   maxLength?: number;
+//   ui_widget?: string;
+// };
+
+export type TaskParameterJsonSchemaProperty = {
+  title?: string;
+  description?: string;
+  type?: string;
+  format?: string;
+  default?: unknown;
+  enum?: unknown[];
+  minimum?: number;
+  maximum?: number;
+  exclusiveMinimum?: number;
+  exclusiveMaximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
+  items?: TaskParameterJsonSchemaProperty;
+  ui_widget?: string;
+};
+
+export type TaskParameterJsonSchema = {
+  title?: string;
+  type?: string;
+  properties?: Record<string, TaskParameterJsonSchemaProperty>;
+  required?: string[];
+};
+
+export type TaskSchemaResponse = {
+  id: string;
+  name: string;
+  description?: string | null;
+  schema: TaskParameterJsonSchema;
+};
+
+export async function listTasks(): Promise<AvailableTask[]> {
+  return request<AvailableTask[]>('/api/tasks');
+}
+
+export async function getTaskSchema(taskKey: string): Promise<TaskSchemaResponse> {
+  return request<TaskSchemaResponse>(`/api/tasks/${taskKey}/schema`);
+}
 
 export async function startDemoTask(seconds = 5): Promise<StartTaskResponse> {
   return request<StartTaskResponse>(`/api/tasks/demo?seconds=${seconds}`, {
@@ -58,29 +121,3 @@ export async function saveTaskParameters(
     body: JSON.stringify(payload),
   });
 }
-
-// import { request } from './client';
-
-// export type StartTaskResponse = {
-//   task_id: string;
-//   status: string;
-// };
-
-// export type TaskStatusResponse = {
-//   task_id: string;
-//   state: string;
-//   message?: string;
-//   current?: number;
-//   total?: number;
-//   result?: unknown;
-// };
-
-// export async function startDemoTask(seconds = 5): Promise<StartTaskResponse> {
-//   return request<StartTaskResponse>(`/api/tasks/demo?seconds=${seconds}`, {
-//     method: 'POST',
-//   });
-// }
-
-// export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
-//   return request<TaskStatusResponse>(`/api/tasks/${taskId}`);
-// }

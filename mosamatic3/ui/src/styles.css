@@ -154,6 +154,21 @@ label {
   gap: 1rem;
 }
 
+.selected-dataset-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.selected-dataset-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;

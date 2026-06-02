@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlmodel import Session
 from ..data.database import get_session
 from ..data.models import User
@@ -10,8 +10,42 @@ from ..services.taskservice import (
   save_task_parameters,
   start_task_by_key,
 )
+from ..tasks.registry import TASKS
 
 router = APIRouter()
+
+
+@router.get("")
+def list_tasks(
+  _: User = Depends(get_current_user),
+) -> list[dict[str, str | None]]:
+  return [
+    {
+      "id": task.key,
+      "name": task.name,
+      "description": task.description,
+    }
+    for task in TASKS.values()
+  ]
+
+
+@router.get("/{task_key}/schema")
+def get_task_schema(
+  task_key: str,
+  _: User = Depends(get_current_user),
+) -> dict[str, object]:
+  task = TASKS.get(task_key)
+  if task is None:
+    raise HTTPException(
+      status_code=404,
+      detail=f"Unknown task: {task_key}",
+    )
+  return {
+    "id": task.key,
+    "name": task.name,
+    "description": task.description,
+    "schema": task.parameter_schema.model_json_schema(),
+  }
 
 
 @router.get("/{task_key}/parameters", response_model=TaskParametersRead)

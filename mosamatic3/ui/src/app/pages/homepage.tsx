@@ -63,7 +63,7 @@ export function HomePage() {
       setIsStartingTask(false);
     }
   }
-  
+
   const buttonDisabled = isStartingTask || isPollingTask;
   const buttonText = isStartingTask
     ? 'Starting...'

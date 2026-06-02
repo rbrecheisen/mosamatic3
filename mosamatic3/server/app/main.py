@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config.config import settings
 from .mainstartup import on_startup
 from .routers import auth, admin, datasets, forms, tasks, health
+# from .tasks.registry import TASKS
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,3 +27,10 @@ app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(datasets.router, prefix="/api/datasets", tags=["datasets"])
 app.include_router(forms.router, prefix="/api/forms", tags=["forms"])
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
+
+# for task in TASKS.values():
+#   app.include_router(
+#     task.router,
+#     prefix=f"/api/tasks/{task.key}",
+#     tags=[f"task:{task.key}"],
+#   )

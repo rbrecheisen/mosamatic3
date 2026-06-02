@@ -1,65 +1,106 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DatasetSummary, listDatasets } from '../../../api/files';
-import { getTaskParameters, saveTaskParameters } from '../../../api/tasks';
+import {
+  getTaskParameters,
+  getTaskSchema,
+  saveTaskParameters,
+  TaskParameterJsonSchemaProperty,
+  TaskSchemaResponse,
+} from '../../../api/tasks';
 
-const TASK_NAMES: Record<string, string> = {
-  demo: 'Demo',
-};
-
-function asString(value: unknown, fallback = ''): string {
-  return typeof value === 'string' || typeof value === 'number' ? String(value) : fallback;
+function getDefaultValue(property: TaskParameterJsonSchemaProperty): unknown {
+  if (property.default !== undefined) return property.default;
+  if (property.ui_widget === 'dataset_select') return '';
+  if (property.ui_widget === 'dataset_multi_select') return [];
+  switch (property.type) {
+    case 'boolean':
+      return false;
+    case 'integer':
+    case 'number':
+      return '';
+    case 'array':
+      return [];
+    case 'string':
+    default:
+      return '';
+  }
 }
 
-function asBoolean(value: unknown, fallback = false): boolean {
-  return typeof value === 'boolean' ? value : fallback;
+function normalizeSubmitValue(
+  property: TaskParameterJsonSchemaProperty,
+  value: unknown,
+): unknown {
+  if (property.ui_widget === 'dataset_select') {
+    return value || null;
+  }
+  if (property.ui_widget === 'dataset_multi_select') {
+    return Array.isArray(value) ? value : [];
+  }
+  if (property.type === 'integer') {
+    return value === '' || value === null || value === undefined ? null : Number.parseInt(String(value), 10);
+  }
+  if (property.type === 'number') {
+    return value === '' || value === null || value === undefined ? null : Number(value);
+  }
+  if (property.type === 'boolean') {
+    return Boolean(value);
+  }
+  return value;
 }
 
-function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+function renderFieldLabel(fieldName: string, property: TaskParameterJsonSchemaProperty) {
+  return property.title ?? fieldName.replace(/_/g, ' ');
 }
 
 export function TaskParametersPage() {
   const { taskKey } = useParams();
   const navigate = useNavigate();
-  const [seconds, setSeconds] = useState('5');
-  const [singleDatasetId, setSingleDatasetId] = useState('');
-  const [textValue, setTextValue] = useState('');
-  const [checkboxValue, setCheckboxValue] = useState(false);
-  const [sliderValue, setSliderValue] = useState('50');
-  const [datasetToAdd, setDatasetToAdd] = useState('');
+
+  const resolvedTaskKey = taskKey ?? '';
+
+  const [taskSchema, setTaskSchema] = useState<TaskSchemaResponse | null>(null);
   const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
-  const [selectedDatasetIds, setSelectedDatasetIds] = useState<string[]>([]);
+  const [values, setValues] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const resolvedTaskKey = taskKey ?? '';
-  const taskName = TASK_NAMES[resolvedTaskKey] ?? resolvedTaskKey;
-  const hasConfiguredForm = Object.keys(TASK_NAMES).includes(resolvedTaskKey);
+
+  const properties = useMemo(
+    () => taskSchema?.schema.properties ?? {},
+    [taskSchema],
+  );
+
+  const requiredFields = useMemo(
+    () => new Set(taskSchema?.schema.required ?? []),
+    [taskSchema],
+  );
 
   useEffect(() => {
     let cancelled = false;
-
-    async function loadSavedParameters() {
+    async function loadPageData() {
       if (!resolvedTaskKey) {
         setError('Missing task key.');
         setLoading(false);
         return;
       }
+      setLoading(true);
+      setError(null);
       try {
-        const [savedParameters, availableDatasets] = await Promise.all([
+        const [schemaResponse, savedParameters, availableDatasets] = await Promise.all([
+          getTaskSchema(resolvedTaskKey),
           getTaskParameters(resolvedTaskKey),
           listDatasets(),
         ]);
         if (cancelled) return;
-
+        setTaskSchema(schemaResponse);
         setDatasets(availableDatasets);
-        setSeconds(asString(savedParameters.parameters.seconds, '5'));
-        setSingleDatasetId(asString(savedParameters.parameters.single_dataset_id, ''));
-        setTextValue(asString(savedParameters.parameters.text_value, ''));
-        setCheckboxValue(asBoolean(savedParameters.parameters.checkbox_value, false));
-        setSliderValue(asString(savedParameters.parameters.slider_value, '50'));
-        setSelectedDatasetIds(asStringArray(savedParameters.parameters.dataset_ids));
+        const initialValues: Record<string, unknown> = {};
+        for (const [fieldName, property] of Object.entries(schemaResponse.schema.properties ?? {})) {
+          initialValues[fieldName] =
+            savedParameters.parameters[fieldName] ?? getDefaultValue(property);
+        }
+        setValues(initialValues);
       } catch (loadError) {
         if (cancelled) return;
         console.error(loadError);
@@ -70,55 +111,67 @@ export function TaskParametersPage() {
         }
       }
     }
-    loadSavedParameters();
+    loadPageData();
     return () => {
       cancelled = true;
     };
   }, [resolvedTaskKey]);
 
-  function handleAddDataset() {
-    if (!datasetToAdd) return;
-    setSelectedDatasetIds((currentIds) => {
-      if (currentIds.includes(datasetToAdd)) {
-        return currentIds;
-      }
-      return [...currentIds, datasetToAdd];
-    });
-    setDatasetToAdd('');
+  function getStringArrayValue(fieldName: string): string[] {
+    const value = values[fieldName];
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.map(String);
   }
 
-  function removeSelectedDataset(datasetId: string) {
-    setSelectedDatasetIds((currentIds) => currentIds.filter((id) => id !== datasetId));
+  function addDatasetToMultiSelect(fieldName: string, datasetId: string) {
+    if (!datasetId) return;
+    const currentDatasetIds = getStringArrayValue(fieldName);
+    if (currentDatasetIds.includes(datasetId)) {
+      return;
+    }
+    updateValue(fieldName, [...currentDatasetIds, datasetId]);
+  }
+
+  function removeDatasetFromMultiSelect(fieldName: string, datasetId: string) {
+    const currentDatasetIds = getStringArrayValue(fieldName);
+    updateValue(
+      fieldName,
+      currentDatasetIds.filter((currentDatasetId) => currentDatasetId !== datasetId),
+    );
+  }
+
+  function updateValue(fieldName: string, value: unknown) {
+    setValues((currentValues) => ({
+      ...currentValues,
+      [fieldName]: value,
+    }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!resolvedTaskKey) {
-      setError('Missing task key.');
+
+    if (!resolvedTaskKey || !taskSchema) {
+      setError('Missing task schema.');
       return;
     }
+
     setSaving(true);
     setError(null);
+
     try {
-      let parameters: Record<string, unknown>;
-      if (resolvedTaskKey === 'demo') {
-        parameters = {
-          seconds: Number(seconds),
-          single_dataset_id: singleDatasetId || null,
-          text_value: textValue,
-          checkbox_value: checkboxValue,
-          slider_value: Number(sliderValue),
-          dataset_ids: selectedDatasetIds,
-        };
-      } else {
-        setError(`No parameter form has been configured for task ${resolvedTaskKey}.`);
-        setSaving(false);
-        return;
+      const parameters: Record<string, unknown> = {};
+
+      for (const [fieldName, property] of Object.entries(properties)) {
+        parameters[fieldName] = normalizeSubmitValue(property, values[fieldName]);
       }
+
       await saveTaskParameters(resolvedTaskKey, {
         task_key: resolvedTaskKey,
         parameters,
       });
+
       navigate('/analysis');
     } catch (saveError) {
       console.error(saveError);
@@ -128,139 +181,180 @@ export function TaskParametersPage() {
     }
   }
 
+  function renderField(fieldName: string, property: TaskParameterJsonSchemaProperty) {
+    const value = values[fieldName];
+    const label = renderFieldLabel(fieldName, property);
+    const isRequired = requiredFields.has(fieldName);
+
+    if (property.ui_widget === 'dataset_multi_select') {
+      const selectedDatasetIds = getStringArrayValue(fieldName);
+      return (
+        <div key={fieldName} className="stack">
+          <label>
+            {label}
+            <select
+              value=""
+              onChange={(event) => {
+                addDatasetToMultiSelect(fieldName, event.target.value);
+                event.target.value = '';
+              }}
+            >
+              <option value="">Add dataset...</option>
+              {datasets
+                .filter((dataset) => !selectedDatasetIds.includes(dataset.id))
+                .map((dataset) => (
+                  <option key={dataset.id} value={dataset.id}>
+                    {dataset.name} ({dataset.file_count} files)
+                  </option>
+                ))}
+            </select>
+            {property.description && <span className="muted">{property.description}</span>}
+          </label>
+          {selectedDatasetIds.length === 0 ? (
+            <p className="muted">No datasets selected.</p>
+          ) : (
+            <ul className="selected-dataset-list">
+              {selectedDatasetIds.map((datasetId) => {
+                const dataset = datasets.find((candidate) => candidate.id === datasetId);
+                return (
+                  <li key={datasetId} className="selected-dataset-row">
+                    <span>
+                      {dataset ? `${dataset.name} (${dataset.file_count} files)` : datasetId}
+                    </span>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => removeDatasetFromMultiSelect(fieldName, datasetId)}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {requiredFields.has(fieldName) && selectedDatasetIds.length === 0 && (
+            <p className="muted">Select at least one dataset.</p>
+          )}
+        </div>
+      );
+    }
+    if (property.ui_widget === 'dataset_select') {
+      return (
+        <label key={fieldName}>
+          {label}
+          <select
+            value={typeof value === 'string' ? value : ''}
+            onChange={(event) => updateValue(fieldName, event.target.value)}
+            required={isRequired}
+          >
+            <option value="">Select a dataset...</option>
+            {datasets.map((dataset) => (
+              <option key={dataset.id} value={dataset.id}>
+                {dataset.name} ({dataset.file_count} files)
+              </option>
+            ))}
+          </select>
+          {property.description && <span className="muted">{property.description}</span>}
+        </label>
+      );
+    }
+
+    if (property.enum) {
+      return (
+        <label key={fieldName}>
+          {label}
+          <select
+            value={String(value ?? '')}
+            onChange={(event) => updateValue(fieldName, event.target.value)}
+            required={isRequired}
+          >
+            <option value="">Select...</option>
+            {property.enum.map((option) => (
+              <option key={String(option)} value={String(option)}>
+                {String(option)}
+              </option>
+            ))}
+          </select>
+          {property.description && <span className="muted">{property.description}</span>}
+        </label>
+      );
+    }
+
+    if (property.type === 'boolean') {
+      return (
+        <label key={fieldName} className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(event) => updateValue(fieldName, event.target.checked)}
+          />
+          {label}
+          {property.description && <span className="muted">{property.description}</span>}
+        </label>
+      );
+    }
+
+    if (property.type === 'integer' || property.type === 'number') {
+      return (
+        <label key={fieldName}>
+          {label}
+          <input
+            type="number"
+            value={typeof value === 'number' || typeof value === 'string' ? value : ''}
+            min={property.minimum}
+            max={property.maximum}
+            onChange={(event) => updateValue(fieldName, event.target.value)}
+            required={isRequired}
+          />
+          {property.description && <span className="muted">{property.description}</span>}
+        </label>
+      );
+    }
+
+    return (
+      <label key={fieldName}>
+        {label}
+        <input
+          type="text"
+          value={typeof value === 'string' || typeof value === 'number' ? String(value) : ''}
+          onChange={(event) => updateValue(fieldName, event.target.value)}
+          required={isRequired}
+          maxLength={property.maxLength}
+        />
+        {property.description && <span className="muted">{property.description}</span>}
+      </label>
+    );
+  }
+
   return (
     <section className="card stack">
       <div>
         <p className="eyebrow">Task parameters</p>
-        <h2>{taskName}</h2>
+        <h2>{taskSchema?.name ?? resolvedTaskKey}</h2>
         <p className="muted">
           Configure the parameters for this task. Saving validates the parameters on the server.
         </p>
       </div>
+
       {loading ? (
         <p className="muted">Loading parameters...</p>
       ) : (
         <form className="stack" onSubmit={handleSubmit}>
-          {resolvedTaskKey === 'demo' && (
-            <>
-              <label>
-                Seconds
-                <input
-                  type="number"
-                  min="1"
-                  max="300"
-                  value={seconds}
-                  onChange={(event) => setSeconds(event.target.value)}
-                  required
-                />
-              </label>
-
-              <label>
-                Single dataset
-                <select
-                  value={singleDatasetId}
-                  onChange={(event) => setSingleDatasetId(event.target.value)}
-                >
-                  <option value="">No single dataset selected</option>
-                  {datasets.map((dataset) => (
-                    <option key={dataset.id} value={dataset.id}>
-                      {dataset.name} ({dataset.file_count} files)
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Text parameter
-                <input
-                  type="text"
-                  value={textValue}
-                  onChange={(event) => setTextValue(event.target.value)}
-                  placeholder="Dummy text value passed to Celery"
-                  maxLength={500}
-                />
-              </label>
-
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={checkboxValue}
-                  onChange={(event) => setCheckboxValue(event.target.checked)}
-                />
-                Boolean checkbox parameter
-              </label>
-
-              <label>
-                Slider-driven numerical parameter: {sliderValue}
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={sliderValue}
-                  onChange={(event) => setSliderValue(event.target.value)}
-                />
-              </label>
-
-              <div className="stack">
-                <label>
-                  Dataset list
-                  <select value={datasetToAdd} onChange={(event) => setDatasetToAdd(event.target.value)}>
-                    <option value="">Select a dataset to add...</option>
-                    {datasets
-                      .filter((dataset) => !selectedDatasetIds.includes(dataset.id))
-                      .map((dataset) => (
-                        <option key={dataset.id} value={dataset.id}>
-                          {dataset.name} ({dataset.file_count} files)
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <div className="row">
-                  <button type="button" className="secondary" onClick={handleAddDataset} disabled={!datasetToAdd}>
-                    Add selected dataset
-                  </button>
-                  <span className="muted">
-                    This creates <code>dataset_ids</code>, a list of dataset IDs sent to the backend.
-                  </span>
-                </div>
-              </div>
-
-              {selectedDatasetIds.length > 0 ? (
-                <div className="stack">
-                  <strong>Selected datasets</strong>
-                  {selectedDatasetIds.map((datasetId) => {
-                    const dataset = datasets.find((item) => item.id === datasetId);
-                    return (
-                      <div key={datasetId} className="row">
-                        <span>
-                          {dataset?.name ?? datasetId}
-                          {dataset && <span className="muted"> — {dataset.file_count} files</span>}
-                        </span>
-                        <button
-                          type="button"
-                          className="secondary"
-                          onClick={() => removeSelectedDataset(datasetId)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="muted">No datasets added to the list yet.</p>
-              )}
-            </>
+          {Object.entries(properties).map(([fieldName, property]) =>
+            renderField(fieldName, property),
           )}
-          {!hasConfiguredForm && (
+
+          {Object.keys(properties).length === 0 && (
             <p className="message">
-              No parameter form has been configured for task <code>{resolvedTaskKey}</code>.
+              This task does not define any parameters.
             </p>
           )}
+
           {error && <p className="message">{error}</p>}
+
           <div className="row">
-            <button type="submit" disabled={saving || !hasConfiguredForm}>
+            <button type="submit" disabled={saving || !taskSchema}>
               {saving ? 'Saving...' : 'Save parameters'}
             </button>
             <button type="button" className="secondary" onClick={() => navigate('/analysis')}>
@@ -272,206 +366,3 @@ export function TaskParametersPage() {
     </section>
   );
 }
-
-// import { FormEvent, useEffect, useState } from 'react';
-// import { useNavigate, useParams } from 'react-router-dom';
-// import { DatasetSummary, listDatasets } from '../../../api/files';
-// import { getTaskParameters, saveTaskParameters } from '../../../api/tasks';
-
-// const TASK_NAMES: Record<string, string> = {
-//   demo: 'Demo',
-// };
-
-// export function TaskParametersPage() {
-//   const { taskKey } = useParams();
-//   const navigate = useNavigate();
-//   const [seconds, setSeconds] = useState('5');
-//   const [datasets, setDatasets] = useState<DatasetSummary[]>([]);
-//   const [selectedDatasetIds, setSelectedDatasetIds] = useState<string[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [saving, setSaving] = useState(false);
-//   const [error, setError] = useState<string | null>(null);
-//   const resolvedTaskKey = taskKey ?? '';
-//   const taskName = TASK_NAMES[resolvedTaskKey] ?? resolvedTaskKey;
-//   const hasConfiguredForm = Object.keys(TASK_NAMES).includes(resolvedTaskKey);
-
-//   useEffect(() => {
-//     let cancelled = false;
-
-//     async function loadSavedParameters() {
-//       if (!resolvedTaskKey) {
-//         setError('Missing task key.');
-//         setLoading(false);
-//         return;
-//       }
-//       try {
-//         const [savedParameters, availableDatasets] = await Promise.all([
-//           getTaskParameters(resolvedTaskKey),
-//           listDatasets(),
-//         ]);
-//         // const savedParameters = await getTaskParameters(resolvedTaskKey);
-//         if (cancelled) return;
-//         setDatasets(availableDatasets);
-//         const savedSeconds = savedParameters.parameters.seconds;
-//         if (typeof savedSeconds === 'number' || typeof savedSeconds === 'string') {
-//           setSeconds(String(savedSeconds));
-//         }
-//         const savedDatasetIds = savedParameters.parameters.dataset_ids;
-//         if (Array.isArray(savedDatasetIds)) {
-//           setSelectedDatasetIds(
-//             savedDatasetIds.filter((id): id is string => typeof id === 'string'),
-//           );
-//         }
-//       } catch (loadError) {
-//         if (cancelled) return;
-//         console.error(loadError);
-//         setError(loadError instanceof Error ? loadError.message : 'Could not load task parameters');
-//       } finally {
-//         if (!cancelled) {
-//           setLoading(false);
-//         }
-//       }
-//     }
-//     loadSavedParameters();
-//     return () => {
-//       cancelled = true;
-//     };
-//   }, [resolvedTaskKey]);
-
-//   function handleDatasetSelect(datasetId: string) {
-//     if (!datasetId) return;
-//     setSelectedDatasetIds((currentIds) => {
-//       if (currentIds.includes(datasetId)) {
-//         return currentIds;
-//       }
-//       return [...currentIds, datasetId];
-//     });
-//   }
-
-//   function removeSelectedDataset(datasetId: string) {
-//     setSelectedDatasetIds((currentIds) =>
-//       currentIds.filter((id) => id !== datasetId),
-//     );
-//   }
-
-//   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-//     event.preventDefault();
-//     if (!resolvedTaskKey) {
-//       setError('Missing task key.');
-//       return;
-//     }
-//     setSaving(true);
-//     setError(null);
-//     try {
-//       let parameters: Record<string, unknown>;
-//       if (resolvedTaskKey === 'demo') {
-//         parameters = {
-//           seconds: Number(seconds),
-//           dataset_ids: selectedDatasetIds,
-//         }
-//       } else {
-//         setError(`No parameter form has been configured for task ${resolvedTaskKey}.`);
-//         setSaving(false);
-//         return;
-//       }
-//       await saveTaskParameters(resolvedTaskKey, {
-//         task_key: resolvedTaskKey,
-//         parameters: parameters,
-//       });
-//       navigate('/analysis');
-//     } catch (saveError) {
-//       console.error(saveError);
-//       setError(saveError instanceof Error ? saveError.message : 'Could not save task parameters');
-//     } finally {
-//       setSaving(false);
-//     }
-//   }
-
-//   return (
-//     <section className="card stack">
-//       <div>
-//         <p className="eyebrow">Task parameters</p>
-//         <h2>{taskName}</h2>
-//         <p className="muted">
-//           Configure the parameters for this task. Saving validates the parameters on the server.
-//         </p>
-//       </div>
-//       {loading ? (
-//         <p className="muted">Loading parameters...</p>
-//       ) : (
-//         <form className="stack" onSubmit={handleSubmit}>
-//           {resolvedTaskKey === 'demo' && (
-//             <>
-//               <label>
-//                 Seconds
-//                 <input
-//                   type="number"
-//                   min="1"
-//                   max="300"
-//                   value={seconds}
-//                   onChange={(event) => setSeconds(event.target.value)}
-//                   required
-//                 />
-//               </label>
-//               <label>
-//                 Add dataset
-//                 <select
-//                   value=""
-//                   onChange={(event) => handleDatasetSelect(event.target.value)}
-//                 >
-//                   <option value="">Select a dataset...</option>
-//                   {datasets
-//                     .filter((dataset) => !selectedDatasetIds.includes(dataset.id))
-//                     .map((dataset) => (
-//                       <option key={dataset.id} value={dataset.id}>
-//                         {dataset.name} ({dataset.file_count} files)
-//                       </option>
-//                     ))}
-//                 </select>
-//               </label>
-//               {selectedDatasetIds.length > 0 && (
-//                 <div className="stack">
-//                   <strong>Selected datasets</strong>
-//                   {selectedDatasetIds.map((datasetId) => {
-//                     const dataset = datasets.find((item) => item.id === datasetId);
-//                     return (
-//                       <div key={datasetId} className="row">
-//                         <span>
-//                           {dataset?.name ?? datasetId}
-//                           {dataset && (
-//                             <span className="muted"> — {dataset.file_count} files</span>
-//                           )}
-//                         </span>
-//                         <button
-//                           type="button"
-//                           className="secondary"
-//                           onClick={() => removeSelectedDataset(datasetId)}
-//                         >
-//                           Remove
-//                         </button>
-//                       </div>
-//                     );
-//                   })}
-//                 </div>
-//               )}
-//             </>
-//           )}
-//           {!hasConfiguredForm && (
-//               <p className="message">
-//                 No parameter form has been configured for task <code>{resolvedTaskKey}</code>.
-//             </p>
-//           )}
-//           {error && <p className="message">{error}</p>}
-//           <div className="row">
-//             <button type="submit" disabled={saving || !hasConfiguredForm}>
-//               {saving ? 'Saving...' : 'Save parameters'}
-//             </button>
-//             <button type="button" className="secondary" onClick={() => navigate('/analysis')}>
-//               Cancel
-//             </button>
-//           </div>
-//         </form>
-//       )}
-//     </section>
-//   );
-// }

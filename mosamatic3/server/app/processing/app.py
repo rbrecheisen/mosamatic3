@@ -8,7 +8,8 @@ celery_app = Celery(
   backend=settings.celery_result_backend,
   include=[
     "app.processing.tasks.demo.demotask",
-    "app.processing.tasks.rescaledicomimages.rescaledicomimagestask",
+    # New format
+    "app.tasks.rescaledicomimages.celerytasks",
   ],
 )
 
