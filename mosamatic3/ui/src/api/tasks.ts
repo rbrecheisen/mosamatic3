@@ -45,6 +45,7 @@ export type TaskParameterJsonSchemaProperty = {
   maximum?: number;
   exclusiveMinimum?: number;
   exclusiveMaximum?: number;
+  multipleOf?: number;
   minLength?: number;
   maxLength?: number;
   minItems?: number;
@@ -73,12 +74,6 @@ export async function listTasks(): Promise<AvailableTask[]> {
 
 export async function getTaskSchema(taskKey: string): Promise<TaskSchemaResponse> {
   return request<TaskSchemaResponse>(`/api/tasks/${taskKey}/schema`);
-}
-
-export async function startDemoTask(seconds = 5): Promise<StartTaskResponse> {
-  return request<StartTaskResponse>(`/api/tasks/demo?seconds=${seconds}`, {
-    method: 'POST',
-  });
 }
 
 export async function startTask(taskKey: string): Promise<StartTaskResponse> {

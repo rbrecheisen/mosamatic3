@@ -53,6 +53,10 @@ function renderFieldLabel(fieldName: string, property: TaskParameterJsonSchemaPr
   return property.title ?? fieldName.replace(/_/g, ' ');
 }
 
+function getNumberInputStep(property: TaskParameterJsonSchemaProperty) {
+  return property.multipleOf ?? undefined;
+}
+
 export function TaskParametersPage() {
   const { taskKey } = useParams();
   const navigate = useNavigate();
@@ -295,6 +299,52 @@ export function TaskParametersPage() {
       );
     }
 
+    if (
+      property.ui_widget === 'slider' &&
+      (property.type === 'integer' || property.type === 'number')
+    ) {
+      const min = property.minimum ?? 0;
+      const max = property.maximum ?? 100;
+      const step = getNumberInputStep(property) ?? 1;
+
+      const defaultValue =
+        typeof property.default === 'number' || typeof property.default === 'string'
+          ? property.default
+          : min;
+
+      const sliderValue =
+        typeof value === 'number' || typeof value === 'string'
+          ? value
+          : defaultValue;
+
+      return (
+        <label key={fieldName}>
+          {label}
+          <input
+            type="range"
+            value={sliderValue}
+            min={min}
+            max={max}
+            step={step}
+            onChange={(event) => {
+              const rawValue = event.target.value;
+              updateValue(
+                fieldName,
+                property.type === 'integer'
+                  ? Number.parseInt(rawValue, 10)
+                  : Number(rawValue),
+              );
+            }}
+            required={isRequired}
+          />
+          <span className="muted">
+            Current value: <strong>{String(sliderValue)}</strong>
+          </span>
+          {property.description && <span className="muted">{property.description}</span>}
+        </label>
+      );
+    }
+
     if (property.type === 'integer' || property.type === 'number') {
       return (
         <label key={fieldName}>
@@ -304,6 +354,7 @@ export function TaskParametersPage() {
             value={typeof value === 'number' || typeof value === 'string' ? value : ''}
             min={property.minimum}
             max={property.maximum}
+            step={getNumberInputStep(property)}
             onChange={(event) => updateValue(fieldName, event.target.value)}
             required={isRequired}
           />
