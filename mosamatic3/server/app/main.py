@@ -7,17 +7,17 @@ from .routers import auth, admin, datasets, forms, tasks, health
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    on_startup()
-    yield
+  on_startup()
+  yield
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+  CORSMiddleware,
+  allow_origins=[settings.frontend_origin],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
 )
 
 app.include_router(health.router, prefix="/api")
