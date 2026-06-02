@@ -34,22 +34,6 @@ export type SaveTaskParametersPayload = {
   parameters: Record<string, unknown>;
 };
 
-// export type TaskParameterJsonSchemaProperty = {
-//   title?: string;
-//   description?: string;
-//   type?: string;
-//   format?: string;
-//   default?: unknown;
-//   enum?: unknown[];
-//   minimum?: number;
-//   maximum?: number;
-//   exclusiveMinimum?: number;
-//   exclusiveMaximum?: number;
-//   minLength?: number;
-//   maxLength?: number;
-//   ui_widget?: string;
-// };
-
 export type TaskParameterJsonSchemaProperty = {
   title?: string;
   description?: string;

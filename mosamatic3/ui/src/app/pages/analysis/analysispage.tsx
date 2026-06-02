@@ -9,18 +9,6 @@ import {
   TaskStatusResponse,
 } from '../../../api/tasks';
 
-// type AvailableTask = {
-//   id: string;
-//   name: string;
-// };
-
-// const AVAILABLE_TASKS: AvailableTask[] = [
-//   {
-//     id: 'demo',
-//     name: 'Demo',
-//   },
-// ];
-
 function isFinalTaskState(state?: string) {
   return state === 'SUCCESS' || state === 'FAILURE' || state === 'REVOKED';
 }
@@ -263,30 +251,3 @@ export function AnalysisPage() {
     </section>
   );
 }
-
-// export function AnalysisPage() {
-//   return (
-//     <section className="card">
-//       <p className="eyebrow">Analysis</p>
-//       <h2>Available tasks</h2>
-//       <p className="muted">
-//         Set task parameters first. Once parameters have been saved successfully, the task can be run.
-//       </p>
-//       <table className="data-table">
-//         <thead>
-//           <tr>
-//             <th>Task</th>
-//             <th>Action</th>
-//             <th>Status</th>
-//             <th>Parameters</th>
-//           </tr>
-//         </thead>
-//         <tbody>
-//           {AVAILABLE_TASKS.map((taskDefinition) => (
-//             <TaskRow key={taskDefinition.id} taskDefinition={taskDefinition} />
-//           ))}
-//         </tbody>
-//       </table>
-//     </section>
-//   );
-// }
