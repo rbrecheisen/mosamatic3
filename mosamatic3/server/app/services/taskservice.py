@@ -34,54 +34,67 @@ def start_rescaledicomimagestask() -> dict[str, str]:
   return {"task_id": task.id, "status": "queued"}
 
 
+def get_dataset_for_user_or_404(
+  raw_dataset_id: Any,
+  current_user: User,
+  session: Session,
+) -> str:
+  try:
+    dataset_id = UUID(str(raw_dataset_id))
+  except (TypeError, ValueError):
+    raise HTTPException(
+      status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+      detail=f"Invalid dataset id: {raw_dataset_id}",
+    )
+  dataset = session.exec(
+    select(Dataset).where(
+      Dataset.owner_id == current_user.id,
+      Dataset.id == dataset_id,
+    )
+  ).first()
+  if dataset is None:
+    raise HTTPException(
+      status_code=status.HTTP_404_NOT_FOUND,
+      detail=f"Dataset not found: {dataset_id}",
+    )
+  return str(dataset_id)
+
+
+def validate_optional_dataset_id(
+  raw_dataset_id: Any,
+  current_user: User,
+  session: Session,
+) -> str | None:
+  if raw_dataset_id in (None, ""):
+    return None
+  return get_dataset_for_user_or_404(raw_dataset_id, current_user, session)
+
+
 def validate_dataset_ids(
   raw_dataset_ids: Any,
   current_user: User,
   session: Session,
 ) -> list[str]:
-  if raw_dataset_ids is None:
-    raise HTTPException(
-      status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-      detail="At least one dataset must be selected.",
-    )
+  if raw_dataset_ids in (None, ""):
+    return []
   if not isinstance(raw_dataset_ids, list):
     raise HTTPException(
       status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
       detail="'dataset_ids' must be a list.",
     )
-  dataset_ids: list[UUID] = []
+  dataset_ids: list[str] = []
   for raw_id in raw_dataset_ids:
-    try:
-      dataset_ids.append(UUID(str(raw_id)))
-    except ValueError:
-      raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail=f"Invalid dataset id: {raw_id}",
-      )
-  if not dataset_ids:
-    raise HTTPException(
-      status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-      detail="At least one dataset must be selected.",
-    )
-  datasets = session.exec(
-    select(Dataset).where(
-      Dataset.owner_id == current_user.id,
-      Dataset.id.in_(dataset_ids),
-    )
-  ).all()
-  if len(datasets) != len(dataset_ids):
-    raise HTTPException(
-      status_code=status.HTTP_404_NOT_FOUND,
-      detail="One or more datasets were not found.",
-    )
-  return [str(dataset_id) for dataset_id in dataset_ids]
+    dataset_id = get_dataset_for_user_or_404(raw_id, current_user, session)
+    if dataset_id not in dataset_ids:
+      dataset_ids.append(dataset_id)
+  return dataset_ids
 
 
 def validate_task_parameters(
-  task_key: str, 
-  parameters: dict[str, Any], 
-  current_user: User, 
-  session: Session
+  task_key: str,
+  parameters: dict[str, Any],
+  current_user: User,
+  session: Session,
 ) -> dict[str, Any]:
   if task_key == "demo":
     raw_seconds = parameters.get("seconds", 5)
@@ -97,6 +110,42 @@ def validate_task_parameters(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail="Demo task parameter 'seconds' must be between 1 and 300.",
       )
+    raw_text_value = parameters.get("text_value", "")
+    if not isinstance(raw_text_value, str):
+      raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Demo task parameter 'text_value' must be a string.",
+      )
+    text_value = raw_text_value.strip()
+    if len(text_value) > 500:
+      raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Demo task parameter 'text_value' must be 500 characters or fewer.",
+      )
+    raw_checkbox_value = parameters.get("checkbox_value", False)
+    if not isinstance(raw_checkbox_value, bool):
+      raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Demo task parameter 'checkbox_value' must be true or false.",
+      )
+    raw_slider_value = parameters.get("slider_value", 50)
+    try:
+      slider_value = float(raw_slider_value)
+    except (TypeError, ValueError):
+      raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Demo task parameter 'slider_value' must be numeric.",
+      )
+    if slider_value < 0 or slider_value > 100:
+      raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Demo task parameter 'slider_value' must be between 0 and 100.",
+      )
+    single_dataset_id = validate_optional_dataset_id(
+      parameters.get("single_dataset_id"),
+      current_user,
+      session,
+    )
     dataset_ids = validate_dataset_ids(
       parameters.get("dataset_ids"),
       current_user,
@@ -104,6 +153,10 @@ def validate_task_parameters(
     )
     return {
       "seconds": seconds,
+      "single_dataset_id": single_dataset_id,
+      "text_value": text_value,
+      "checkbox_value": raw_checkbox_value,
+      "slider_value": slider_value,
       "dataset_ids": dataset_ids,
     }
   raise HTTPException(
@@ -216,6 +269,10 @@ def start_task_by_key(
   if task_key == "demo":
     return start_demotask(
       seconds=parameters["seconds"],
+      single_dataset_id=parameters["single_dataset_id"],
+      text_value=parameters["text_value"],
+      checkbox_value=parameters["checkbox_value"],
+      slider_value=parameters["slider_value"],
       dataset_ids=parameters["dataset_ids"],
     )
   raise HTTPException(
