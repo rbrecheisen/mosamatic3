@@ -1,3 +1,3 @@
-cd ..\mosamatic3\ui
+cd mosamatic3\ui
 npm run dev
-cd ..\..\scripts
+cd ..\..

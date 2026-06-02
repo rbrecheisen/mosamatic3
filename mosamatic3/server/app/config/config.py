@@ -7,11 +7,11 @@ class Settings(BaseSettings):
   secret_key: str = "change-me-in-production"
   algorithm: str = "HS256"
   access_token_expire_minutes: int = 60 * 24
-  database_url: str = "sqlite:///./data/app.db"
-  upload_root: Path = Path("./data/uploads")
+  database_url: str = "sqlite:////data/app.db"
+  upload_root: Path = Path("/data/uploads")
   frontend_origin: str = "http://localhost:5173"
   admin_username: str = "admin"
-  admin_password_file: Path = Path("./data/admin_password.txt")
+  admin_password_file: Path = Path("/run/secrets/admin_password.txt")
   celery_broker_url: str = "redis://localhost:6379/0"
   celery_result_backend: str = "redis://localhost:6379/0"
   model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
