@@ -1,5 +1,6 @@
 from celery import Celery
 from .config.config import settings
+from .tasks.registry import TASKS
 
 
 celery_app = Celery(
@@ -7,7 +8,8 @@ celery_app = Celery(
   broker=settings.celery_broker_url,
   backend=settings.celery_result_backend,
   include=[
-    "app.tasks.rescaledicomimages.celerytasks",
+    task.celery_module
+    for task in TASKS.values()
   ],
 )
 
