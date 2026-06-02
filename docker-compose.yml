@@ -20,11 +20,6 @@ services:
       FRONTEND_ORIGIN: http://localhost:5173
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      # DATABASE_URL: sqlite:////data/app.db
-      # UPLOAD_ROOT: /data/uploads
-      # FRONTEND_ORIGIN: http://localhost:5173
-      # CELERY_BROKER_URL: redis://redis:6379/0
-      # CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
       - server_data:/data
       - ./mosamatic3/server/data/admin_password.txt:/run/secrets/admin_password.txt:ro
@@ -45,11 +40,6 @@ services:
       FRONTEND_ORIGIN: http://localhost:5173
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      # DATABASE_URL: sqlite:////data/app.db
-      # UPLOAD_ROOT: /data/uploads
-      # FRONTEND_ORIGIN: http://localhost:5173
-      # CELERY_BROKER_URL: redis://redis:6379/0
-      # CELERY_RESULT_BACKEND: redis://redis:6379/0
     volumes:
       - server_data:/data
       - ./mosamatic3/server/data/admin_password.txt:/run/secrets/admin_password.txt:ro

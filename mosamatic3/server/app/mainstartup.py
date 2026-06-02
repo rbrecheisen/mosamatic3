@@ -12,8 +12,6 @@ def read_admin_password() -> str:
       f"File with admin password does not exist: {password_file}. "
       "For local development, create data/admin_password.txt."
     )
-  # if not password_file.exists():
-  #   raise RuntimeError(f"File with admin password does not exist ({password_file})")
   password = password_file.read_text(encoding="utf-8").strip()
   if not password:
     raise RuntimeError("Could not load admin password")
