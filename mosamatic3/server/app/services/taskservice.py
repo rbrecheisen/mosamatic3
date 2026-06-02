@@ -10,8 +10,22 @@ from ..processing.tasks.demo.demotask import demotask
 from ..processing.tasks.rescaledicomimages.rescaledicomimagestask import rescaledicomimagestask
 
 
-def start_demotask(seconds: int, dataset_ids: list[str]) -> dict[str, str]:
-  task = demotask.delay(seconds, dataset_ids)
+def start_demotask(
+  seconds: int,
+  single_dataset_id: str | None,
+  text_value: str,
+  checkbox_value: bool,
+  slider_value: float,
+  dataset_ids: list[str],
+) -> dict[str, str]:
+  task = demotask.delay(
+    seconds=seconds,
+    single_dataset_id=single_dataset_id,
+    text_value=text_value,
+    checkbox_value=checkbox_value,
+    slider_value=slider_value,
+    dataset_ids=dataset_ids,
+  )
   return {"task_id": task.id, "status": "queued"}
 
 

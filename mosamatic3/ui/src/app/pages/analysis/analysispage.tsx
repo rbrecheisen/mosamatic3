@@ -46,7 +46,7 @@ function getDisplayStatus(
     case 'REVOKED':
       return 'revoked';
     default:
-      return task.state.toLowerCase();
+      return task?.state?.toLowerCase() ?? 'unknown';
   }
 }
 
