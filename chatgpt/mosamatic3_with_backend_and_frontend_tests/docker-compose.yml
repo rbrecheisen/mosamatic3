@@ -1,0 +1,60 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: mosamatic3-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  server:
+    build: ./mosamatic3/server
+    container_name: mosamatic3-server
+    env_file:
+      - ./mosamatic3/server/.env.example
+    environment:
+      DATABASE_URL: sqlite:////data/app.db
+      UPLOAD_ROOT: /data/uploads
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      FRONTEND_ORIGIN: http://localhost:5173
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - server_data:/data
+      - ./mosamatic3/server/data/admin_password.txt:/run/secrets/admin_password.txt:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  worker:
+    build: ./mosamatic3/server
+    container_name: mosamatic3-worker
+    env_file:
+      - ./mosamatic3/server/.env.example
+    environment:
+      DATABASE_URL: sqlite:////data/app.db
+      UPLOAD_ROOT: /data/uploads
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      FRONTEND_ORIGIN: http://localhost:5173
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - server_data:/data
+      - ./mosamatic3/server/data/admin_password.txt:/run/secrets/admin_password.txt:ro
+    command: celery -A app.celeryapp.celery_app worker --loglevel=info --pool=solo
+    depends_on:
+      - redis
+
+  ui:
+    build: ./mosamatic3/ui
+    container_name: mosamatic3-ui
+    depends_on:
+      - server
+    ports:
+      - "5173:80"
+
+volumes:
+  server_data:
+  redis_data:
