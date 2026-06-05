@@ -39,9 +39,6 @@ dependencies = [
   "python-jose[cryptography]>=3.3.0",
   "pydantic-settings>=2.6.0",
   "celery[redis]>=5.4.0",
-
-  # Packages testing
-  "pytest>=8.0.0",
 ]
 
 [tool.uv]
@@ -50,3 +47,8 @@ package = false
 [tool.setuptools.packages.find]
 include = ["app*"]
 exclude = ["data*"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+]
