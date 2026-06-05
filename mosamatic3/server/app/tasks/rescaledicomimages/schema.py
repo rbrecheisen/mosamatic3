@@ -17,8 +17,3 @@ class RescaleDicomImagesTaskParameters(BaseModel):
     le=4096,
     description="Target square image size in pixels",
   )
-  overwrite_existing: bool = Field(
-    default=False,
-    title="Overwrite existing files",
-    description="Overwrite existing rescaled files if they already exist",
-  )
