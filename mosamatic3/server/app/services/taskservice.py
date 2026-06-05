@@ -1,6 +1,7 @@
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 from celery.result import AsyncResult
+from celery.exceptions import Ignore
 from fastapi import HTTPException, status
 from pydantic import ValidationError
 from sqlmodel import Session, select
@@ -8,6 +9,7 @@ from ..data.models import Dataset, TaskParameters, User, utc_now
 from ..data.schemas import TaskParametersRead, TaskParametersSave
 from ..celeryapp import celery_app
 from ..tasks.registry import TASKS
+from .taskrunservice import create_task_run, request_task_cancel
 
 
 def get_task_definition_or_404(task_key: str):
@@ -170,39 +172,120 @@ def save_task_parameters(
   )
 
 
+# def start_task_by_key(
+#   task_key: str,
+#   current_user: User,
+#   session: Session,
+# ) -> dict[str, str]:
+#   task = get_task_definition_or_404(task_key)
+#   saved = session.exec(
+#     select(TaskParameters).where(
+#       TaskParameters.owner_id == current_user.id,
+#       TaskParameters.task_key == task_key,
+#     )
+#   ).first()
+#   if saved is None or not saved.is_valid:
+#     raise HTTPException(
+#       status_code=status.HTTP_400_BAD_REQUEST,
+#       detail="Valid task parameters must be submitted before running this task.",
+#     )
+#   parameters = validate_task_parameters(
+#     task_key,
+#     saved.parameters,
+#     current_user,
+#     session,
+#   )
+#   celery_result = celery_app.send_task(
+#     task.celery_task_name,
+#     args=[
+#       parameters,
+#       str(current_user.id),
+#     ],
+#   )
+#   return {
+#     "task_id": celery_result.id,
+#     "status": "queued",
+#   }
+
+
 def start_task_by_key(
   task_key: str,
   current_user: User,
   session: Session,
 ) -> dict[str, str]:
   task = get_task_definition_or_404(task_key)
+
   saved = session.exec(
     select(TaskParameters).where(
       TaskParameters.owner_id == current_user.id,
       TaskParameters.task_key == task_key,
     )
   ).first()
+
   if saved is None or not saved.is_valid:
     raise HTTPException(
       status_code=status.HTTP_400_BAD_REQUEST,
       detail="Valid task parameters must be submitted before running this task.",
     )
+
   parameters = validate_task_parameters(
     task_key,
     saved.parameters,
     current_user,
     session,
   )
-  celery_result = celery_app.send_task(
+
+  celery_task_id = str(uuid4())
+
+  create_task_run(
+    owner_id=current_user.id,
+    task_key=task_key,
+    celery_task_id=celery_task_id,
+    session=session,
+  )
+
+  celery_app.send_task(
     task.celery_task_name,
     args=[
       parameters,
       str(current_user.id),
     ],
+    task_id=celery_task_id,
   )
+
   return {
-    "task_id": celery_result.id,
+    "task_id": celery_task_id,
     "status": "queued",
+  }
+
+
+def cancel_task_by_id(
+  task_id: str,
+  current_user: User,
+  session: Session,
+) -> dict[str, object]:
+  task_run = request_task_cancel(
+    celery_task_id=task_id,
+    current_user=current_user,
+    session=session,
+  )
+
+  if task_run is None:
+    raise HTTPException(
+      status_code=status.HTTP_404_NOT_FOUND,
+      detail=f"Task run not found: {task_id}",
+    )
+
+  result = AsyncResult(task_id, app=celery_app)
+
+  # This cancels tasks that are still queued.
+  # Running tasks will stop cooperatively when their service.py loop checks the DB flag.
+  result.revoke(terminate=False)
+
+  return {
+    "task_id": task_id,
+    "status": "cancel_requested",
+    "message": "Cancel requested",
   }
 
 
@@ -214,6 +297,8 @@ def get_celery_task_status(task_id: str) -> dict[str, object]:
   }
   if result.state == "PENDING":
     response["message"] = "Task is pending or unknown"
+  elif result.state == "REVOKED":
+    response["message"] = "Task was cancelled"
   elif result.state == "FAILURE":
     response["message"] = str(result.info)
   elif isinstance(result.info, dict):

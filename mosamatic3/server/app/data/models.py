@@ -48,6 +48,17 @@ class TaskParameters(SQLModel, table=True):
   updated_at: datetime = Field(default_factory=utc_now)
 
 
+class TaskRun(SQLModel, table=True):
+  id: UUID = Field(default_factory=uuid4, primary_key=True)
+  owner_id: UUID = Field(index=True, foreign_key="user.id")
+  task_key: str = Field(index=True)
+  celery_task_id: str = Field(index=True, unique=True)
+  status: str = Field(default="queued", index=True)
+  cancel_requested: bool = Field(default=False, index=True)
+  created_at: datetime = Field(default_factory=utc_now)
+  updated_at: datetime = Field(default_factory=utc_now)
+
+
 class FormSubmission(SQLModel, table=True):
   id: UUID = Field(default_factory=uuid4, primary_key=True)
   owner_id: UUID = Field(index=True, foreign_key="user.id")

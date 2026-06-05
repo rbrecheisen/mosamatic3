@@ -11,13 +11,29 @@ export type StartTaskResponse = {
   status: string;
 };
 
+// export type TaskStatusResponse = {
+//   task_id: string;
+//   state: string;
+//   message?: string;
+//   current?: number;
+//   total?: number;
+//   result?: unknown;
+// };
+
 export type TaskStatusResponse = {
   task_id: string;
   state: string;
   message?: string;
   current?: number;
   total?: number;
+  cancel_requested?: boolean;
   result?: unknown;
+};
+
+export type CancelTaskResponse = {
+  task_id: string;
+  status: string;
+  message?: string;
 };
 
 export type TaskParametersResponse = {
@@ -84,6 +100,12 @@ export async function startTask(taskKey: string): Promise<StartTaskResponse> {
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
   return request<TaskStatusResponse>(`/api/tasks/${taskId}`);
+}
+
+export async function cancelTask(taskId: string): Promise<CancelTaskResponse> {
+  return request<CancelTaskResponse>(`/api/tasks/${taskId}/cancel`, {
+    method: 'POST',
+  });
 }
 
 export async function getTaskParameters(taskKey: string): Promise<TaskParametersResponse> {

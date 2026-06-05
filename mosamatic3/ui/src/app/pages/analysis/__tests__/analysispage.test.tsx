@@ -9,14 +9,16 @@ vi.mock('../../../../api/tasks', () => ({
   getTaskParameters: vi.fn(),
   startTask: vi.fn(),
   getTaskStatus: vi.fn(),
+  cancelTask: vi.fn(),
 }));
 
-import { getTaskParameters, getTaskStatus, listTasks, startTask } from '../../../../api/tasks';
+import { cancelTask, getTaskParameters, getTaskStatus, listTasks, startTask } from '../../../../api/tasks';
 
 const mockedListTasks = vi.mocked(listTasks);
 const mockedGetTaskParameters = vi.mocked(getTaskParameters);
 const mockedStartTask = vi.mocked(startTask);
 const mockedGetTaskStatus = vi.mocked(getTaskStatus);
+const mockedCancelTask = vi.mocked(cancelTask);
 
 describe('AnalysisPage', () => {
   it('renders tasks and disables Run until valid parameters exist', async () => {
@@ -67,5 +69,46 @@ describe('AnalysisPage', () => {
     await waitFor(() => expect(mockedStartTask).toHaveBeenCalledWith('demo'));
     expect(await screen.findByText(/finished/i)).toBeInTheDocument();
     expect(screen.getByText(/celery-1/i)).toBeInTheDocument();
+  });
+
+  it('shows Cancel while a task is running and requests cancellation', async () => {
+    const user = userEvent.setup();
+
+    mockedListTasks.mockResolvedValueOnce([
+      { id: 'demo', name: 'Demo task', description: 'Dummy task' },
+    ]);
+
+    mockedGetTaskParameters.mockResolvedValueOnce({
+      task_key: 'demo',
+      exists: true,
+      is_valid: true,
+      parameters: { integer_value: 5 },
+    });
+
+    mockedStartTask.mockResolvedValueOnce({ task_id: 'celery-1', status: 'queued' });
+
+    mockedGetTaskStatus.mockResolvedValue({
+      task_id: 'celery-1',
+      state: 'STARTED',
+      message: 'Running',
+      current: 1,
+      total: 5,
+    });
+
+    mockedCancelTask.mockResolvedValueOnce({
+      task_id: 'celery-1',
+      status: 'cancel_requested',
+      message: 'Cancel requested',
+    });
+
+    renderWithRouter(<AnalysisPage />);
+
+    await user.click(await screen.findByRole('button', { name: /run/i }));
+
+    const cancelButton = await screen.findByRole('button', { name: /cancel/i });
+    await user.click(cancelButton);
+
+    await waitFor(() => expect(mockedCancelTask).toHaveBeenCalledWith('celery-1'));
+    expect(await screen.findByText(/cancel requested/i)).toBeInTheDocument();
   });
 });

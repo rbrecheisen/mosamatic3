@@ -25,6 +25,22 @@ def safe_relative_path(filename: str) -> Path:
   return Path(*parts)
 
 
+def get_dataset_file_path(
+  user_id: UUID,
+  dataset_id: UUID,
+  relative_path: str,
+) -> Path:
+  file_path = (
+    settings.upload_root
+    / str(user_id)
+    / str(dataset_id)
+    / safe_relative_path(relative_path)
+  )
+  if not file_path.exists() or not file_path.is_file():
+    raise FileNotFoundError(f"Dataset file not found: {file_path}")
+  return file_path
+
+
 def dataset_to_read(dataset: Dataset, files: list[DatasetFile]) -> DatasetRead:
   return DatasetRead(
     id=dataset.id,
@@ -147,6 +163,23 @@ def delete_dataset_for_user(
   if dataset is None:
     raise HTTPException(status_code=404, detail="Dataset not found")
   delete_dataset_and_files(dataset, current_user.id, session)
+
+
+def delete_output_datasets_for_user(
+  current_user: User,
+  session: Session,
+) -> int:
+  output_datasets = session.exec(
+    select(Dataset).where(
+      Dataset.owner_id == current_user.id,
+      Dataset.kind == "output",
+    )
+  ).all()
+  deleted_count = 0
+  for dataset in output_datasets:
+    delete_dataset_and_files(dataset, current_user.id, session)
+    deleted_count += 1
+  return deleted_count
 
 
 def get_dataset_files(

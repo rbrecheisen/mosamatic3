@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AvailableTask,
+  cancelTask,
   getTaskParameters,
   getTaskStatus,
   listTasks,
@@ -10,7 +11,8 @@ import {
 } from '../../../api/tasks';
 
 function isFinalTaskState(state?: string) {
-  return state === 'SUCCESS' || state === 'FAILURE' || state === 'REVOKED';
+  const normalizedState = state?.toUpperCase();
+  return normalizedState === 'SUCCESS' || normalizedState === 'FAILURE' || normalizedState === 'REVOKED';
 }
 
 function getDisplayStatus(
@@ -23,10 +25,13 @@ function getDisplayStatus(
   if (isStarting) return 'starting';
   if (!taskId) return 'idle';
 
-  switch (task?.state) {
+  const normalizedState = task?.state?.toUpperCase();
+
+  switch (normalizedState) {
     case undefined:
     case 'PENDING':
     case 'STARTED':
+    case 'PROGRESS':
     case 'RETRY':
       return 'running';
     case 'SUCCESS':
@@ -46,11 +51,14 @@ function TaskRow({ taskDefinition }: { taskDefinition: AvailableTask }) {
   const [hasValidParameters, setHasValidParameters] = useState(false);
   const [parametersChecked, setParametersChecked] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const displayStatus = getDisplayStatus(taskId, task, isStarting, error);
   const isRunning = displayStatus === 'starting' || displayStatus === 'running';
-  const canRun = hasValidParameters && !isRunning;
+  const hasFinished = displayStatus === 'finished' || displayStatus === 'failed' || displayStatus === 'revoked';
+  const canRun = hasValidParameters && !isRunning && (!taskId || hasFinished);
+  const canCancel = isRunning && !!taskId && !isCancelling;
 
   useEffect(() => {
     let cancelled = false;
@@ -130,14 +138,47 @@ function TaskRow({ taskDefinition }: { taskDefinition: AvailableTask }) {
     }
   }
 
+  async function handleCancelTask() {
+    if (!taskId) return;
+    setIsCancelling(true);
+    setError(null);
+    try {
+      await cancelTask(taskId);
+      setTask((currentTask) => ({
+        task_id: taskId,
+        state: currentTask?.state ?? 'STARTED',
+        current: currentTask?.current,
+        total: currentTask?.total,
+        message: 'Cancel requested',
+        cancel_requested: true,
+      }));
+    } catch (cancelError) {
+      console.error(cancelError);
+      setError(cancelError instanceof Error ? cancelError.message : 'Could not cancel task');
+    } finally {
+      setIsCancelling(false);
+    }
+  }
+
   return (
     <tr>
       <td>{taskDefinition.name}</td>
 
       <td>
-        <button type="button" onClick={handleRunTask} disabled={!canRun}>
-          Run
-        </button>
+        {isRunning ? (
+          <button
+            type="button"
+            onClick={handleCancelTask}
+            disabled={!taskId}
+            className="warning"
+          >
+            Cancel
+          </button>
+        ) : (
+          <button type="button" onClick={handleRunTask} disabled={!canRun}>
+            Run
+          </button>
+        )}
       </td>
 
       <td>

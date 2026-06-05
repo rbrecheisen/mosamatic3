@@ -10,6 +10,7 @@ from ..services.datasetservice import (
   create_dataset_for_user,
   create_dataset_zip_for_user,
   delete_dataset_for_user,
+  delete_output_datasets_for_user,
   get_dataset_for_user,
   list_datasets_for_user,
 )
@@ -56,6 +57,14 @@ def download_dataset(
       "Content-Disposition": f'attachment; filename="{filename}"',
     },
   )
+
+
+@router.delete("/output-results", status_code=status.HTTP_204_NO_CONTENT)
+def delete_output_results(
+  current_user: User = Depends(get_current_user),
+  session: Session = Depends(get_session),
+) -> None:
+  delete_output_datasets_for_user(current_user, session)
 
 
 @router.get("/{dataset_id}", response_model=DatasetRead)

@@ -5,6 +5,7 @@ from ..data.models import User
 from ..data.schemas import TaskParametersRead, TaskParametersSave
 from ..services.authservice import get_current_user
 from ..services.taskservice import (
+  cancel_task_by_id,
   get_celery_task_status,
   get_saved_task_parameters,
   save_task_parameters,
@@ -82,3 +83,12 @@ def get_task_status(
   _: User = Depends(get_current_user),
 ) -> dict[str, object]:
   return get_celery_task_status(task_id)
+
+
+@router.post("/{task_id}/cancel", status_code=status.HTTP_202_ACCEPTED)
+def cancel_task(
+  task_id: str,
+  current_user: User = Depends(get_current_user),
+  session: Session = Depends(get_session),
+) -> dict[str, object]:
+  return cancel_task_by_id(task_id, current_user, session)

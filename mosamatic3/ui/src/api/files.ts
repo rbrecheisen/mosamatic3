@@ -71,6 +71,12 @@ export async function deleteDataset(datasetId: string): Promise<void> {
   });
 }
 
+export async function deleteOutputResults(): Promise<void> {
+  await request<void>('/api/datasets/output-results', {
+    method: 'DELETE',
+  });
+}
+
 export async function downloadDataset(datasetId: string): Promise<void> {
   const response = await fetch(`/api/datasets/${datasetId}/download`, {
     method: 'GET',

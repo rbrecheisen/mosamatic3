@@ -283,3 +283,34 @@ td {
 .data-table a:hover {
   text-decoration: underline;
 }
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.section-title-row h3 {
+  margin: 0;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  color: #3152d4;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover:not(:disabled) {
+  text-decoration-thickness: 2px;
+}
+
+.link-button.danger-link {
+  color: #b42318;
+}

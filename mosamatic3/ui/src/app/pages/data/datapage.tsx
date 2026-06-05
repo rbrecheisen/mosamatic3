@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
-import { DatasetSummary, listDatasets, uploadDataset, deleteDataset } from '../../../api/files';
+import { DatasetSummary, listDatasets, uploadDataset, deleteDataset, deleteOutputResults } from '../../../api/files';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -87,6 +87,25 @@ export function DataPage() {
       setMessage(`Deleted dataset "${dataset.name}".`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Delete failed');
+    }
+  }
+
+  async function handleDeleteOutputResults() {
+    if (outputDatasets.length === 0) {
+      setMessage('No output results to delete.');
+      return;
+    }
+    const confirmed = window.confirm(
+      `Delete all ${outputDatasets.length} output result dataset(s)? Input datasets will be kept.`,
+    );
+    if (!confirmed) return;
+    setMessage('Deleting all output results...');
+    try {
+      await deleteOutputResults();
+      setDatasets((current) => current.filter((dataset) => dataset.kind !== 'output'));
+      setMessage('Deleted all output results.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not delete output results');
     }
   }
 
@@ -186,34 +205,21 @@ export function DataPage() {
         <p className="muted">No input datasets uploaded yet.</p>
       ) : (
         renderDatasetTable(inputDatasets)
-        // <table className="data-table">
-        //   <thead>
-        //     <tr>
-        //       <th>Name</th>
-        //       <th>Files</th>
-        //       <th>Total size</th>
-        //       <th>Created</th>
-        //       <th>Actions</th>
-        //     </tr>
-        //   </thead>
-        //   <tbody>
-        //     {datasets.map((dataset) => (
-        //       <tr key={dataset.id}>
-        //         <td><Link to={`/data/${dataset.id}`}>{dataset.name}</Link></td>
-        //         <td>{dataset.file_count}</td>
-        //         <td>{formatBytes(dataset.total_size_bytes)}</td>
-        //         <td>{new Date(dataset.created_at).toLocaleString()}</td>
-        //         <td>
-        //           <button type='button' onClick={() => handleDeleteDataset(dataset)}>delete</button>
-        //         </td>
-        //       </tr>
-        //     ))}
-        //   </tbody>
-        // </table>
       )}
 
-      <h3>Output results</h3>
-
+      <div className="section-title-row">
+        <h3>Output results</h3>
+        {outputDatasets.length > 0 && (
+          <button
+            type="button"
+            className="link-button danger-link"
+            onClick={handleDeleteOutputResults}
+            disabled={uploading}
+          >
+            (delete all)
+          </button>
+        )}
+      </div>
       {outputDatasets.length === 0 ? (
         <p className="muted">No output results yet. Run an analysis task to generate output datasets.</p>
       ) : (
