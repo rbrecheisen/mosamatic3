@@ -1,0 +1,53 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: mosamatic3-django-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    container_name: mosamatic3-django-web
+    environment:
+      SECRET_KEY: change-me-in-production
+      DEBUG: "1"
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      DATABASE_URL: sqlite:////data/app.db
+      UPLOAD_ROOT: /data/uploads
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - server_data:/data
+      - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    container_name: mosamatic3-django-worker
+    environment:
+      SECRET_KEY: change-me-in-production
+      DEBUG: "1"
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      DATABASE_URL: sqlite:////data/app.db
+      UPLOAD_ROOT: /data/uploads
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - server_data:/data
+      - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
+    command: sh -c "celery -A config.celery_app worker --loglevel=info --pool=solo"
+    depends_on:
+      - redis
+
+volumes:
+  server_data:
+  redis_data:

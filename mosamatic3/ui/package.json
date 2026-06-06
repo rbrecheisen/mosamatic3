@@ -16,17 +16,17 @@
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "^7.15.0",
-    "typescript": "latest",
     "vite": "latest"
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
     "@types/node": "^22.10.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "jsdom": "^25.0.1",
+    "typescript": "^6.0.3",
     "vitest": "^2.1.8"
   }
 }

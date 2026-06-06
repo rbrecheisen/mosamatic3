@@ -1,0 +1,321 @@
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #172033;
+  background: #f4f6fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+.button-like {
+  border: 0;
+  border-radius: 10px;
+  background: #3152d4;
+  color: white;
+  padding: 0.7rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button.secondary {
+  background: #e6eaf7;
+  color: #263452;
+}
+
+button.active {
+  outline: 2px solid #3152d4;
+}
+
+button.danger {
+  background: #b42318;
+  color: white;
+  border-color: #b42318;
+}
+
+button.danger:hover:not(:disabled) {
+  background: #912018;
+  border-color: #912018;
+}
+
+button.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.warning,
+.button-like.warning {
+  background: #f97316;
+  color: white;
+}
+
+button.success,
+.button-like.success {
+  background: #16a34a;
+  color: white;
+}
+
+.data-table a.button-like {
+  color: white;
+  text-decoration: none;
+}
+
+.data-table a.button-like:hover {
+  text-decoration: none;
+}
+
+.data-table td:nth-child(2),
+.data-table th:nth-child(2) {
+  width: 120px;
+}
+
+.data-table td:nth-child(4),
+.data-table th:nth-child(4) {
+  width: 190px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #c8d0e2;
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  background: white;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 650;
+}
+
+.app-shell {
+  width: min(1150px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  background: linear-gradient(135deg, #172033, #3152d4);
+  color: white;
+  border-radius: 24px;
+  padding: 2rem;
+  margin-bottom: 1rem;
+}
+
+.hero h1 {
+  margin: 0.2rem 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: white;
+  border: 1px solid #e2e6f0;
+  border-radius: 20px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 12px 30px rgb(36 45 70 / 8%);
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.selected-dataset-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.page-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-header-row h2 {
+  margin: 0;
+}
+
+.selected-dataset-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.checkbox-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
+.user-box {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  background: rgb(255 255 255 / 12%);
+  padding: 0.7rem;
+  border-radius: 14px;
+}
+
+.message {
+  background: #eef3ff;
+  border-left: 4px solid #3152d4;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.muted {
+  color: #60708d;
+}
+
+.file-list {
+  max-height: 220px;
+  overflow: auto;
+  background: #f7f9fd;
+  border-radius: 12px;
+  padding: 1rem 1rem 1rem 2rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  border-bottom: 1px solid #e2e6f0;
+  padding: 0.6rem;
+}
+
+.workflow-tabs {
+  display: flex;
+  width: 100%;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.workflow-tab {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 600;
+  color: #334155;
+  background: #ffffff;
+  border-right: 1px solid #d0d7de;
+}
+
+.workflow-tab:last-child {
+  border-right: none;
+}
+
+.workflow-tab:hover {
+  background: #adc0e9;
+}
+
+.workflow-tab-active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.data-table a {
+  color: #3152d4;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.data-table a:hover {
+  text-decoration: underline;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.section-title-row h3 {
+  margin: 0;
+}
+
+.link-button {
+  border: 0;
+  background: none;
+  color: #3152d4;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover:not(:disabled) {
+  text-decoration-thickness: 2px;
+}
+
+.link-button.danger-link {
+  color: #b42318;
+}
+
+.narrow { max-width: 520px; margin-left: auto; margin-right: auto; }
+a.button-like { text-decoration: none; }
+.error { color: #b42318; }
+.success { color: #16a34a; }
