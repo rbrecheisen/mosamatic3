@@ -6,6 +6,8 @@ zipFilePath="$root/sources.zip"
 itemsToInclude=(
   "mosamatic3/serveronly/config"
   "mosamatic3/serveronly/core"
+  "mosamatic3/serveronly/docker"
+  "mosamatic3/serveronly/nginx"
   "mosamatic3/serveronly/static"
   "mosamatic3/serveronly/templates"
   "mosamatic3/serveronly/.env.example"
@@ -13,6 +15,7 @@ itemsToInclude=(
   "mosamatic3/serveronly/Dockerfile"
   "mosamatic3/serveronly/manage.py"
   "mosamatic3/serveronly/pyproject.toml"
+  "mosamatic3/serveronly/uv.lock"
 )
 
 cd "$root" || exit 1

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>Upload files or folders</h2>
+  <p class="muted">Each upload is stored as one dataset under the configured upload root.</p>
+  <form id="upload-form" class="stack">
+    {% csrf_token %}
+    <label>Dataset name <input name="name" required></label>
+    <label>Files <input name="files" type="file" multiple required></label>
+    <button type="submit">Upload files</button>
+  </form>
+  <p id="upload-message" class="message" style="display:none"></p>
+</section>
+<section class="card">
+  <h3>Input datasets</h3>
+  {% include 'partials/dataset_table.html' with datasets=input_datasets empty='No input datasets uploaded yet.' %}
+</section>
+<section class="card">
+  <div class="section-title-row"><h3>Output results</h3>{% if output_datasets %}<button id="delete-output" class="link-button danger-link">(delete all)</button>{% endif %}</div>
+  {% include 'partials/dataset_table.html' with datasets=output_datasets empty='No output results yet. Run an analysis task to generate output datasets.' %}
+</section>
+<script>
+const uploadForm = document.getElementById('upload-form');
+const msg = document.getElementById('upload-message');
+uploadForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  msg.style.display = 'block'; msg.textContent = 'Uploading...';
+  const response = await fetch('/api/datasets', {method:'POST', headers:{'X-CSRFToken': window.csrfToken}, body:new FormData(uploadForm)});
+  if (response.ok) location.reload(); else msg.textContent = await response.text();
+});
+document.getElementById('delete-output')?.addEventListener('click', async () => {
+  if (!confirm('Delete all output result datasets? Input datasets will be kept.')) return;
+  const response = await fetch('/api/datasets/output-results', {method:'DELETE', headers:{'X-CSRFToken': window.csrfToken}});
+  if (response.ok) location.reload(); else alert(await response.text());
+});
+async function deleteDataset(id, name) {
+  if (!confirm(`Delete dataset "${name}"?`)) return;
+  const response = await fetch(`/api/datasets/${id}`, {method:'DELETE', headers:{'X-CSRFToken': window.csrfToken}});
+  if (response.ok) location.reload(); else alert(await response.text());
+}
+</script>
+{% endblock %}

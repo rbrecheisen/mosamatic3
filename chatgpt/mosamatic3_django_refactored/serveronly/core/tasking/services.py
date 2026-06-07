@@ -1,0 +1,91 @@
+from typing import Any
+from uuid import UUID, uuid4
+from celery.result import AsyncResult
+from django.utils import timezone
+from rest_framework.exceptions import NotFound, ValidationError, PermissionDenied
+from config.celery_app import app as celery_app
+from ..models import Dataset, TaskParameters
+from .registry import TASKS
+from .taskrun_service import create_task_run, request_task_cancel
+
+def get_task_definition_or_404(task_key: str):
+    task = TASKS.get(task_key)
+    if task is None:
+        raise NotFound(f'Unknown task: {task_key}')
+    return task
+
+def validate_dataset_references(parameters: dict[str, Any], user) -> None:
+    for field_name in ['dataset_id', 'single_dataset_id']:
+        raw = parameters.get(field_name)
+        if raw not in (None, ''):
+            if not Dataset.objects.filter(owner=user, id=raw).exists():
+                raise NotFound(f'Dataset not found: {raw}')
+    raw_ids = parameters.get('dataset_ids')
+    if raw_ids in (None, ''):
+        return
+    if not isinstance(raw_ids, list):
+        raise ValidationError("'dataset_ids' must be a list.")
+    for raw in raw_ids:
+        if not Dataset.objects.filter(owner=user, id=raw).exists():
+            raise NotFound(f'Dataset not found: {raw}')
+
+def validate_task_parameters(task_key: str, parameters: dict[str, Any], user) -> dict[str, Any]:
+    task = get_task_definition_or_404(task_key)
+    try:
+        validated = task.parameter_schema.model_validate(parameters).model_dump(mode='json')
+    except Exception as exc:
+        raise ValidationError(getattr(exc, 'errors', lambda: str(exc))()) from exc
+    validate_dataset_references(validated, user)
+    return validated
+
+def get_saved_task_parameters(task_key: str, user):
+    get_task_definition_or_404(task_key)
+    saved = TaskParameters.objects.filter(owner=user, task_key=task_key).first()
+    if saved is None:
+        return {'task_key': task_key, 'parameters': {}, 'is_valid': False, 'error_message': None, 'exists': False, 'updated_at': None}
+    return {'task_key': saved.task_key, 'parameters': saved.parameters, 'is_valid': saved.is_valid, 'error_message': saved.error_message, 'exists': True, 'updated_at': saved.updated_at}
+
+def save_task_parameters(task_key: str, payload: dict, user):
+    if payload.get('task_key') != task_key:
+        raise ValidationError('Task key in URL and request body do not match.')
+    validated = validate_task_parameters(task_key, payload.get('parameters') or {}, user)
+    saved, _ = TaskParameters.objects.update_or_create(
+        owner=user,
+        task_key=task_key,
+        defaults={'parameters': validated, 'is_valid': True, 'error_message': None, 'updated_at': timezone.now()},
+    )
+    return get_saved_task_parameters(task_key, user)
+
+def start_task_by_key(task_key: str, user) -> dict[str, str]:
+    task = get_task_definition_or_404(task_key)
+    saved = TaskParameters.objects.filter(owner=user, task_key=task_key, is_valid=True).first()
+    if saved is None:
+        raise ValidationError('Valid task parameters must be submitted before running this task.')
+    parameters = validate_task_parameters(task_key, saved.parameters, user)
+    celery_task_id = str(uuid4())
+    create_task_run(owner=user, task_key=task_key, celery_task_id=celery_task_id)
+    celery_app.send_task(task.celery_task_name, args=[parameters, str(user.id)], task_id=celery_task_id)
+    return {'task_id': celery_task_id, 'status': 'queued'}
+
+def cancel_task_by_id(task_id: str, user) -> dict[str, object]:
+    task_run = request_task_cancel(task_id, user)
+    if task_run is None:
+        raise NotFound(f'Task run not found: {task_id}')
+    result = AsyncResult(task_id, app=celery_app)
+    result.revoke(terminate=False)
+    return {'task_id': task_id, 'status': 'cancel_requested', 'message': 'Cancel requested'}
+
+def get_celery_task_status(task_id: str) -> dict[str, object]:
+    result = AsyncResult(task_id, app=celery_app)
+    response = {'task_id': task_id, 'state': result.state}
+    if result.state == 'PENDING':
+        response['message'] = 'Task is pending or unknown'
+    elif result.state == 'REVOKED':
+        response['message'] = 'Task was cancelled'
+    elif result.state == 'FAILURE':
+        response['message'] = str(result.info)
+    elif isinstance(result.info, dict):
+        response.update(result.info)
+    elif result.ready():
+        response['result'] = result.result
+    return response
