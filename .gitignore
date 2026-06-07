@@ -1,6 +1,8 @@
 sources.zip
 mosamatic3/server/data/uploads
+mosamatic3/serveronly/data/uploads
 mosamatic3/server/data/admin_password.txt
+mosamatic3/serveronly/data/admin_password.txt
 chatgpt/mosamatic3_django_migration/data/admin_password.txt
 *.db
 
