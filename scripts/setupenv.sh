@@ -1,0 +1,3 @@
+#!/bin/zsh
+
+conda create -n mosamatic3 python=3.11 pip twine setuptools wheel python-build tomlkit -c conda-forge
