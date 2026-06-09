@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from core.common.api_views import health
-from core.accounts import api_views as account_api_views
+from mosamatic3.serveronly.core.accounts import apiviews as account_api_views
 from core.datasets import api_views as dataset_api_views
 from core.forms import api_views as form_api_views
 from core.tasking import api_views as task_api_views

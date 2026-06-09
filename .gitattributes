@@ -1,0 +1,14 @@
+# Force Linux-compatible line endings for files executed inside Docker
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.conf text eol=lf
+*.py text eol=lf
+
+# Keep Windows scripts Windows-compatible
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

@@ -8,7 +8,7 @@ services:
       - redis_data:/data
 
   web:
-    image: brecheisen/mosamatic3:latest
+    build: .
     container_name: mosamatic3-django-web
     environment:
       SECRET_KEY: change-me-in-production
@@ -36,7 +36,7 @@ services:
       - redis
 
   worker:
-    image: brecheisen/mosamatic3:latest
+    build: .
     container_name: mosamatic3-django-worker
     environment:
       SECRET_KEY: change-me-in-production
