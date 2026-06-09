@@ -17,17 +17,13 @@ services:
       CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
       USE_X_FORWARDED_HOST: "1"
       SECURE_PROXY_SSL_HEADER: "0"
-
       DATABASE_URL: sqlite:////data/app.db
       UPLOAD_ROOT: /data/uploads
       STATIC_ROOT: /staticfiles
-
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
-
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-
       GUNICORN_WORKERS: "3"
       GUNICORN_TIMEOUT: "120"
     volumes:
@@ -46,17 +42,13 @@ services:
       SECRET_KEY: change-me-in-production
       DEBUG: "0"
       ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
-
       DATABASE_URL: sqlite:////data/app.db
       UPLOAD_ROOT: /data/uploads
       STATIC_ROOT: /staticfiles
-
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
-
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-
       CELERY_LOGLEVEL: info
       CELERY_POOL: solo
     volumes:
