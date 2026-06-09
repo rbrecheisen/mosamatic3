@@ -6,7 +6,7 @@ from rest_framework.exceptions import NotFound, ValidationError, PermissionDenie
 from config.celery_app import app as celery_app
 from ..models import Dataset, TaskParameters
 from .registry import TASKS
-from .taskrun_service import create_task_run, request_task_cancel
+from .taskrunservice import create_task_run, request_task_cancel
 
 def get_task_definition_or_404(task_key: str):
     task = TASKS.get(task_key)

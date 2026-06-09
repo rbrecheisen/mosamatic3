@@ -1,12 +1,12 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from core.common.api_views import health
-from mosamatic3.serveronly.core.accounts import apiviews as account_api_views
-from core.datasets import api_views as dataset_api_views
-from core.forms import api_views as form_api_views
-from core.tasking import api_views as task_api_views
-from core.adminpanel import api_views as admin_api_views
+from core.common.apiviews import health
+from core.accounts import apiviews as account_api_views
+from core.datasets import apiviews as dataset_api_views
+from core.forms import apiviews as form_api_views
+from core.tasking import apiviews as task_api_views
+from core.adminpanel import apiviews as admin_api_views
 
 
 urlpatterns = [

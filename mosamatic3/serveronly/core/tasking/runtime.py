@@ -5,7 +5,7 @@ from celery.exceptions import Ignore
 from pydantic import BaseModel
 from ..models import Dataset
 from ..datasets.services import OutputDatasetFile, create_output_dataset_for_user_id, get_dataset_file_path
-from .taskrun_service import is_cancel_requested, mark_task_run_status
+from .taskrunservice import is_cancel_requested, mark_task_run_status
 
 TParams = TypeVar('TParams', bound=BaseModel)
 

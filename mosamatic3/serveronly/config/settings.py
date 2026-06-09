@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -75,16 +75,6 @@ if DATABASE_URL.startswith('sqlite:///'):
     }
 else:
     raise RuntimeError('Only sqlite DATABASE_URL is configured in this generated migration.')
-
-# DATABASE_URL = os.getenv('DATABASE_URL', f"sqlite:///{BASE_DIR / 'data' / 'app.db'}")
-# if DATABASE_URL.startswith('sqlite:///'):
-#     db_name = DATABASE_URL.replace('sqlite:///', '', 1)
-#     if not db_name.startswith('/'):
-#         db_name = str(BASE_DIR / db_name)
-#     Path(db_name).parent.mkdir(parents=True, exist_ok=True)
-#     DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': db_name}}
-# else:
-#     raise RuntimeError('Only sqlite DATABASE_URL is configured in this generated migration.')
 
 AUTH_PASSWORD_VALIDATORS = []
 LANGUAGE_CODE = 'en-us'
