@@ -1,6 +1,6 @@
 from config.celery_app import app
 from .demo.service import run_demo_task
-from .rescale_dicom_images.service import run_rescale_dicom_images_task
+from .rescaledicomimages.service import run_rescale_dicom_images_task
 
 
 @app.task(bind=True, name='core.processing.tasks.run_demotask')
