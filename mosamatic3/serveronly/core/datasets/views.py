@@ -7,7 +7,11 @@ def data_page(request):
     datasets = Dataset.objects.filter(owner=request.user).prefetch_related('files').order_by('-created_at')
     input_datasets = [d for d in datasets if d.kind != 'output']
     output_datasets = [d for d in datasets if d.kind == 'output']
-    return render(request, 'datasets/data.html', {'input_datasets': input_datasets, 'output_datasets': output_datasets})
+    return render(request, 'datasets/data.html', {
+        'input_datasets': input_datasets, 
+        'output_datasets': output_datasets,
+        'output_empty_message': 'No output results yet. Run an analysis task to generate output datasets.',
+    })
 
 @login_required
 def dataset_detail_page(request, dataset_id):

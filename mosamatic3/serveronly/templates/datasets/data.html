@@ -6,8 +6,9 @@
   <form id="upload-form" class="stack">
     {% csrf_token %}
     <label>Dataset name <input name="name" required></label>
-    <label>Files <input name="files" type="file" multiple required></label>
-    <button type="submit">Upload files</button>
+    <label>Files <input id="file-input" type="file" multiple></label>
+    <label>Folder <input id="folder-input" type="file" multiple webkitdirectory directory></label>
+    <button type="submit">Upload selected files/folder</button>
   </form>
   <p id="upload-message" class="message" style="display:none"></p>
 </section>
@@ -16,27 +17,51 @@
   {% include 'partials/dataset_table.html' with datasets=input_datasets empty='No input datasets uploaded yet.' %}
 </section>
 <section class="card">
-  <div class="section-title-row"><h3>Output results</h3>{% if output_datasets %}<button id="delete-output" class="link-button danger-link">(delete all)</button>{% endif %}</div>
-  {% include 'partials/dataset_table.html' with datasets=output_datasets empty='No output results yet. Run an analysis task to generate output datasets.' %}
+  <div class="section-title-row">
+    <h3>Output results</h3>{% if output_datasets %}<button id="delete-output" class="link-button danger-link">(delete
+      all)</button>{% endif %}
+  </div>
+  {% include 'partials/dataset_table.html' with datasets=output_datasets empty=output_empty_message %}
 </section>
 <script>
-const uploadForm = document.getElementById('upload-form');
-const msg = document.getElementById('upload-message');
-uploadForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  msg.style.display = 'block'; msg.textContent = 'Uploading...';
-  const response = await fetch('/api/datasets', {method:'POST', headers:{'X-CSRFToken': window.csrfToken}, body:new FormData(uploadForm)});
-  if (response.ok) location.reload(); else msg.textContent = await response.text();
-});
-document.getElementById('delete-output')?.addEventListener('click', async () => {
-  if (!confirm('Delete all output result datasets? Input datasets will be kept.')) return;
-  const response = await fetch('/api/datasets/output-results', {method:'DELETE', headers:{'X-CSRFToken': window.csrfToken}});
-  if (response.ok) location.reload(); else alert(await response.text());
-});
-async function deleteDataset(id, name) {
-  if (!confirm(`Delete dataset "${name}"?`)) return;
-  const response = await fetch(`/api/datasets/${id}`, {method:'DELETE', headers:{'X-CSRFToken': window.csrfToken}});
-  if (response.ok) location.reload(); else alert(await response.text());
-}
+  const uploadForm = document.getElementById('upload-form');
+  const msg = document.getElementById('upload-message');
+  uploadForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    msg.style.display = 'block';
+
+    const fileInput = document.getElementById('file-input');
+    const folderInput = document.getElementById('folder-input');
+    const selectedFiles = [
+      ...Array.from(fileInput?.files || []),
+      ...Array.from(folderInput?.files || []),
+    ];
+
+    if (selectedFiles.length === 0) {
+      msg.textContent = 'Select at least one file or folder.';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', uploadForm.elements.name.value);
+    for (const file of selectedFiles) {
+      formData.append('files', file);
+      formData.append('relative_paths', file.webkitRelativePath || file.name);
+    }
+
+    msg.textContent = `Uploading ${selectedFiles.length} file(s)...`;
+    const response = await fetch('/api/datasets', { method: 'POST', headers: { 'X-CSRFToken': window.csrfToken }, body: formData });
+    if (response.ok) location.reload(); else msg.textContent = await response.text();
+  });
+  document.getElementById('delete-output')?.addEventListener('click', async () => {
+    if (!confirm('Delete all output result datasets? Input datasets will be kept.')) return;
+    const response = await fetch('/api/datasets/output-results', { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+    if (response.ok) location.reload(); else alert(await response.text());
+  });
+  async function deleteDataset(id, name) {
+    if (!confirm(`Delete dataset "${name}"?`)) return;
+    const response = await fetch(`/api/datasets/${id}`, { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+    if (response.ok) location.reload(); else alert(await response.text());
+  }
 </script>
 {% endblock %}
