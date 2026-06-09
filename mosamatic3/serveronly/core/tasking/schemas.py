@@ -16,11 +16,6 @@ class RescaleDicomImagesTaskParameters(BaseModel):
   dataset_id: UUID = Field(title='Dataset', description='Dataset containing the DICOM files to rescale', json_schema_extra={'ui_widget': 'dataset_select'})
   target_size: int = Field(default=512, title='Target size', ge=64, le=4096, description='Target square image size in pixels')
 
-
 class SliceSelectTaskParameters(BaseModel):
   dataset_id: UUID = Field(title='Dataset', description='Dataset containing the DICOM files to rescale', json_schema_extra={'ui_widget': 'dataset_select'})
   vertebral_level: Literal['L3', 'T4'] = Field(default='L3', title='Vertebral level')
-  output_name: str = 'Slice Select output'
-  fast_mode: bool = Field(default=True, title='Enable fast mode')
-  create_review_pngs: bool = Field(default=True, title='Create sagittal review PNGs')
-  patient_id_path_part_index: int = Field(default=1, title='Patient ID part index')

@@ -3,13 +3,12 @@ import math
 import shutil
 import tempfile
 import time
+import numpy as np
+import pydicom
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
 from typing import Any
-
-import numpy as np
-import pydicom
 from PIL import Image
 from celery.exceptions import Ignore
 
@@ -31,6 +30,10 @@ class CandidateScan:
     columns: int = -1
     files: list[Path] = field(default_factory=list)
     relative_files: list[str] = field(default_factory=list)
+
+fast_mode = True
+create_review_pngs = True
+patient_id_path_part_index = 1
 
 
 def read_dicom_header(file_path: Path):
@@ -276,7 +279,7 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
         'warnings': [],
     }
 
-    run_totalsegmentator(scan.path, mask_dir, fast=params.fast_mode)
+    run_totalsegmentator(scan.path, mask_dir, fast=fast_mode)
     selected_slice, z_vertebra, messages = find_selected_slice(scan, params.vertebral_level, mask_dir)
     warnings = [message for message in messages if 'outside DICOM range' in message]
     errors = [message for message in messages if message not in warnings]
@@ -288,7 +291,7 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
 
     patient_id = patient_id_from_relative_path(
         scan.relative_files[0] if scan.relative_files else scan.relative_path,
-        params.patient_id_path_part_index,
+        patient_id_path_part_index,
         scan.series_instance_uid[-12:],
     )
     prefix = relative_output_prefix(params.vertebral_level, patient_id, scan.series_instance_uid)
@@ -301,7 +304,7 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
         )
     ]
 
-    if params.create_review_pngs:
+    if create_review_pngs:
         output_files.append(
             OutputDatasetFile(
                 relative_path=f'review/{prefix}_axial.png',
@@ -390,7 +393,7 @@ def run_slice_select_task(parameters: dict, user_id: str, celery_task=None) -> d
                 'task': 'sliceselect',
                 'input_dataset_id': str(params.dataset_id),
                 'vertebral_level': params.vertebral_level,
-                'fast_mode': params.fast_mode,
+                'fast_mode': fast_mode,
                 'candidate_scans': total,
                 'completed_count': len(completed),
                 'failed_count': len(failed),
@@ -398,7 +401,7 @@ def run_slice_select_task(parameters: dict, user_id: str, celery_task=None) -> d
             }, indent=2).encode('utf-8'),
         ))
 
-        output_dataset = runtime.create_output_dataset(name=params.output_name, files=output_files)
+        output_dataset = runtime.create_output_dataset(name='Slice Select output', files=output_files)
         message = f'Slice selection completed: {len(completed)} succeeded, {len(failed)} failed'
         runtime.update_progress(current=total, total=total, message=message)
         runtime.mark_finished()
