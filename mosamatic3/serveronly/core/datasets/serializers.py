@@ -13,7 +13,21 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dataset
-        fields = ['id', 'name', 'kind', 'source_task_key', 'source_task_id', 'created_at', 'file_count', 'total_size_bytes', 'files']
+        # fields = ['id', 'name', 'kind', 'source_task_key', 'source_task_id', 'created_at', 'file_count', 'total_size_bytes', 'files']
+        fields = [
+          'id',
+          'name',
+          'kind',
+          'status',
+          'source_task_key',
+          'source_task_id',
+          'source_dataset',
+          'parameter_hash',
+          'created_at',
+          'file_count',
+          'total_size_bytes',
+          'files',
+      ]
 
     def get_file_count(self, obj):
         return obj.files.count()

@@ -1,14 +1,39 @@
 {% extends 'base.html' %}
 {% block content %}
 <section class="card">
-  <div class="page-header-row"><div><h2>{{ dataset.name }}</h2><p class="muted">{{ dataset.file_count }} file(s), {{ dataset.total_size_bytes }} bytes, created {{ dataset.created_at }}<br>Type: {{ dataset.kind }}</p></div><a class="button-like" href="/api/datasets/{{ dataset.id }}/download">Download ZIP</a></div>
+  <div class="page-header-row">
+    <div>
+      <h2>{{ dataset.name }}</h2>
+      <p class="muted">{{ dataset.file_count }} file(s)</p>
+      <p class="muted">{{ dataset.total_size_bytes }} bytes</p>
+      <p class="muted">created {{ dataset.created_at}}</p>
+      <p class="muted">Type: {{ dataset.kind }}</p>
+      <p class="muted">Status: {{ dataset.status }}</p>
+      <p class="muted">Source task: {{ dataset.source_task_key|default:"-" }}</p>
+      </p>
+    </div>
+    <a class="button-like" href="/api/datasets/{{ dataset.id }}/download">Download ZIP</a>
+  </div>
   <a class="button-like secondary" href="{% url 'data' %}">Back to datasets</a>
 </section>
 <section class="card">
   {% if dataset.files.all %}
-  <table class="data-table"><thead><tr><th>Relative path</th><th>Size bytes</th><th>Created</th></tr></thead><tbody>
-  {% for file in dataset.files.all %}<tr><td>{{ file.relative_path }}</td><td>{{ file.size_bytes }}</td><td>{{ file.created_at }}</td></tr>{% endfor %}
-  </tbody></table>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Relative path</th>
+        <th>Size bytes</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for file in dataset.files.all %}<tr>
+        <td>{{ file.relative_path }}</td>
+        <td>{{ file.size_bytes }}</td>
+        <td>{{ file.created_at }}</td>
+      </tr>{% endfor %}
+    </tbody>
+  </table>
   {% else %}<p class="muted">This dataset contains no files.</p>{% endif %}
 </section>
 {% endblock %}

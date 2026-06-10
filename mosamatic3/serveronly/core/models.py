@@ -6,12 +6,38 @@ from django.contrib.auth.models import User
 
 class Dataset(models.Model):
     KIND_CHOICES = [('input', 'Input'), ('output', 'Output')]
+    STATUS_CHOICES = [
+        ('ready', 'Ready'),
+        ('in_progress', 'In progress'),
+        ('cancelled', 'Cancelled'),
+        ('failed', 'Failed'),
+        ('done', 'Done'),
+    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='datasets')
     name = models.CharField(max_length=255)
     kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='input', db_index=True)
     source_task_key = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     source_task_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='ready',
+        db_index=True,
+    )
+    source_dataset = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='derived_datasets',
+    )
+    parameter_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        db_index=True,
+    )
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

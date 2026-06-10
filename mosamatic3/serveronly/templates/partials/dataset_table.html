@@ -1,17 +1,31 @@
 {% if datasets %}
 <table class="data-table">
-  <thead><tr><th>Name</th><th>Files</th><th>Total size</th><th>Created</th><th>Source</th><th>Actions</th></tr></thead>
+  <!-- <thead><tr><th>Name</th><th>Files</th><th>Total size</th><th>Created</th><th>Source</th><th>Actions</th></tr></thead> -->
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Status</th>
+      <th>Files</th>
+      <th>Total size</th>
+      <th>Created</th>
+      <th>Source</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
   <tbody>
-  {% for dataset in datasets %}
+    {% for dataset in datasets %}
     <tr>
       <td><a href="{% url 'dataset_detail' dataset.id %}">{{ dataset.name }}</a></td>
+      <td>{{ dataset.status }}</td>
       <td>{{ dataset.file_count }}</td>
       <td>{{ dataset.total_size_bytes }} bytes</td>
       <td>{{ dataset.created_at }}</td>
-      <td>{% if dataset.kind == 'output' %}{{ dataset.source_task_key|default:'Task output' }}{% else %}Uploaded{% endif %}</td>
-      <td><button type="button" onclick="deleteDataset('{{ dataset.id }}','{{ dataset.name|escapejs }}')">delete</button></td>
+      <td>{% if dataset.kind == 'output' %}{{ dataset.source_task_key|default:'Task output' }}{% else %}Uploaded{% endif
+        %}</td>
+      <td><button type="button"
+          onclick="deleteDataset('{{ dataset.id }}','{{ dataset.name|escapejs }}')">delete</button></td>
     </tr>
-  {% endfor %}
+    {% endfor %}
   </tbody>
 </table>
 {% else %}<p class="muted">{{ empty }}</p>{% endif %}
