@@ -1,18 +1,20 @@
 {% load static %}
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mosamatic3</title>
   <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
+
 <body>
   <div class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">Mosamatic3</p>
-        <h1>Django edition</h1>
+        <p class="eyebrow">Body composition analysis, reporting and studies</p>
+        <h1>Mosamatic3</h1>
       </div>
       <div class="user-box">
         {% if request.user.is_authenticated %}
@@ -20,7 +22,9 @@
           <a class="button-like secondary" href="{% url 'home' %}">Home</a>
           <a class="button-like secondary" href="{% url 'data' %}">Data</a>
           <a class="button-like secondary" href="{% url 'analysis' %}">Analysis</a>
-          {% if request.user.is_staff %}<a class="button-like secondary" href="{% url 'admin_panel' %}">Admin</a>{% endif %}
+          {% if request.user.is_staff %}
+            <a class="button-like secondary" href="{% url 'admin_panel' %}">Admin</a>
+          {% endif %}
           <a class="button-like warning" href="{% url 'logout' %}">Logout</a>
         {% else %}
           <a class="button-like secondary" href="{% url 'login' %}">Login</a>
@@ -35,4 +39,5 @@
     window.csrfToken = '{{ csrf_token }}';
   </script>
 </body>
+
 </html>

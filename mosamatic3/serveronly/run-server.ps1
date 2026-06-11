@@ -1,9 +1,9 @@
 conda activate mosamatic3
 
-$env:PYTHONPATH = "D:\SoftwareDevelopment\GitHub\mosamatic3;$env:PYTHONPATH"
+$env:PYTHONPATH = "D:\SoftwareDevelopment\GitHub\mosamatic3\mosamatic3\serveronly;$env:PYTHONPATH"
 
 # Start Redis only, not the Docker worker
-& ".\docker-runbackendservices.ps1"
+& ".\run-dockerbackendservices.ps1"
 
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
@@ -14,7 +14,7 @@ Start-Process powershell.exe -ArgumentList @(
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
     "-Command",
-    "conda activate mosamatic3; cd '$PWD'; `$env:PYTHONPATH='D:\SoftwareDevelopment\GitHub\mosamatic3;' + `$env:PYTHONPATH; python -m celery -A config.celery_app worker --loglevel=info --pool=solo"
+    "conda activate mosamatic3; cd '$PWD'; `$env:PYTHONPATH='D:\SoftwareDevelopment\GitHub\mosamatic3\mosamatic3\serveronly;' + `$env:PYTHONPATH; python -m celery -A config.celery_app worker --loglevel=info --pool=solo"
 )
 
 # Start Django in this window

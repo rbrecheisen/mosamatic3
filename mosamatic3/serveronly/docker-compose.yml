@@ -55,7 +55,7 @@ services:
       - server_data:/data
       - staticfiles:/staticfiles
       - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
-    command: ["/app/mosamatic3/serveronly/docker/entrypoint-worker.sh"]
+    command: ["/app/docker/entrypoint-worker.sh"]
     depends_on:
       - redis
 

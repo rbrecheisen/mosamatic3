@@ -15,7 +15,7 @@ export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
 cd "$SERVER_DIR"
 
 # Start Redis only, not the Docker worker
-./docker-runbackendservices.sh
+./run-dockerbackendservices.sh
 
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
