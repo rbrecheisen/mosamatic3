@@ -48,16 +48,11 @@ dependencies = [
 
   # Testing
   "pytest>=8.0.0",
+  "pytest-django>=4.12.0",
 ]
 
 [tool.uv]
 package = false
-
-[dependency-groups]
-dev = [
-  "pytest>=8.0.0",
-  "pytest-django>=4.9.0",
-]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"

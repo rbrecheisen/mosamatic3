@@ -1,0 +1,2 @@
+export MOSAMATIC_TEST_ABDOMEN_PATH="/Users/ralph/Library/CloudStorage/GoogleDrive-ralph.brecheisen@gmail.com/My Drive/data/Mosamatic/testdata/CT/abdomen"
+python -m pytest tests/test_sliceselect_resume.py -s -m integration
