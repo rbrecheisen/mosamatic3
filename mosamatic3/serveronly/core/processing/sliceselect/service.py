@@ -15,7 +15,6 @@ from celery.exceptions import Ignore
 
 from ...common.dicom import load_dicom
 from ...datasets.serializers import DatasetSerializer
-# from ...datasets.services import OutputDatasetFile, get_dataset_file_path
 from ...datasets.services import (
     OutputDatasetFile,
     append_output_files_to_dataset,

@@ -4,22 +4,27 @@ root="$HOME/Documents/Development/GitHub/mosamatic3/mosamatic3/serveronly"
 zipFilePath="$root/archive.zip"
 
 itemsToInclude=(
-  "config",
-  "core",
-  "docker",
-  "nginx",
-  "static",
-  "templates",
-  ".env.example",
-  "docker-compose.yml",
-  "docker-compose-dev.yml",
-  "docker-deploy2hub.ps1",
-  "docker-pullfromhub-runall.ps1",
-  "docker-runall.ps1",
-  "docker-runbackendservices.ps1",
-  "Dockerfile",
-  "manage.py",
-  "pyproject.toml",
+  "config"
+  "core"
+  "docker"
+  "nginx"
+  "static"
+  "templates"
+  ".env.example"
+  "docker-compose.yml"
+  "docker-compose-dev.yml"
+  "run-dockerall.sh"
+  "run-dockerallfromdockerhub.sh"
+  "run-dockerdeploy2hub.sh"
+  "run-dockerstop.sh"
+  "run-server.sh"
+  "run-setupenv.sh"
+  "run-tests.sh"
+  "run-uvinstall.sh"
+  "run-uvsync.sh"
+  "Dockerfile"
+  "manage.py"
+  "pyproject.toml"
   "uv.lock"
 )
 
