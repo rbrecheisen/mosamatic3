@@ -2,6 +2,7 @@ from config.celery_app import app
 from .demo.service import run_demo_task
 from .rescaledicomimages.service import run_rescale_dicom_images_task
 from .sliceselect.service import run_slice_select_task
+from .segmentmusclefatl3tensorflow.service import run_segment_muscle_fat_l3_tensorflow_task
 
 
 @app.task(bind=True, name='core.processing.tasks.run_demotask')
