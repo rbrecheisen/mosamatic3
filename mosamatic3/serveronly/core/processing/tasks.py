@@ -2,7 +2,7 @@ from config.celery_app import app
 from .demo.service import run_demo_task
 from .rescaledicomimages.service import run_rescale_dicom_images_task
 from .sliceselect.service import run_slice_select_task
-from .segmentmusclefatl3tensorflow.service import run_segment_muscle_fat_l3_tensorflow_task
+from .segmentmusclefatl3.service import run_segment_muscle_fat_l3_tensorflow_task
 
 
 @app.task(bind=True, name='core.processing.tasks.run_demotask')
@@ -18,3 +18,8 @@ def run_rescaledicomimagestask(self, parameters: dict, user_id: str) -> dict:
 @app.task(bind=True, name='core.processing.tasks.run_sliceselecttask')
 def run_sliceselecttask(self, parameters: dict, user_id: str) -> dict:
     return run_slice_select_task(parameters, user_id, celery_task=self)
+
+
+@app.task(bind=True, name='core.processing.tasks.run_segmentmusclefatl3tensorflowtask')
+def run_segmentmusclefatl3tensorflowtask(self, parameters: dict, user_id: str) -> dict:
+    return run_segment_muscle_fat_l3_tensorflow_task(parameters, user_id, celery_task=self)

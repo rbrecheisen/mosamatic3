@@ -480,6 +480,20 @@ wheels = [
 ]
 
 [[package]]
+name = "docker"
+version = "7.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "requests" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834, upload-time = "2024-05-23T11:13:57.216Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e3/26/57c6fb270950d476074c087527a558ccb6f4436657314bfb6cdf484114c4/docker-7.1.0-py3-none-any.whl", hash = "sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0", size = 147774, upload-time = "2024-05-23T11:13:55.01Z" },
+]
+
+[[package]]
 name = "dynamic-network-architectures"
 version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1039,6 +1053,7 @@ dependencies = [
     { name = "dicom2nifti" },
     { name = "django" },
     { name = "djangorestframework" },
+    { name = "docker" },
     { name = "gunicorn" },
     { name = "matplotlib" },
     { name = "nibabel" },
@@ -1077,6 +1092,7 @@ requires-dist = [
     { name = "dicom2nifti", specifier = ">=2.6.2" },
     { name = "django", specifier = ">=5.1,<5.3" },
     { name = "djangorestframework", specifier = ">=3.15.0" },
+    { name = "docker", specifier = ">=7.1.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "matplotlib", specifier = ">=3.10.0" },
     { name = "nibabel", specifier = ">=5.3.2" },
@@ -1737,6 +1753,16 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/39/d512c0aec6379eea36f17e8ae4f0d2877bfaae32efe0a47d610c20f04036/python_gdcm-3.2.6-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7d6033cc01b62e96b928eb8e35b520f2f7a640919f3a569b043c1e64010de0c7", size = 12277638, upload-time = "2026-05-11T00:39:53.108Z" },
     { url = "https://files.pythonhosted.org/packages/2c/33/b925a15ac7597ff24f1601830a0cd8dd8f488348bdf208cf613fe2bc2fe8/python_gdcm-3.2.6-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:716e8a20de03e6a90035ee4575b19bb4b204e219a428509b686c1c28ef6de2d9", size = 13278697, upload-time = "2026-05-11T00:39:57.455Z" },
     { url = "https://files.pythonhosted.org/packages/95/23/87bf04e52112e6eb3ef6e95417cb508bea77332c3312197d3a9a59574ac4/python_gdcm-3.2.6-cp311-cp311-win_amd64.whl", hash = "sha256:c752d94d92239c6bda313a514edd8bd5a17167c751d4ab1bdad82c6b559c5213", size = 34235777, upload-time = "2026-05-11T00:40:03.888Z" },
+]
+
+[[package]]
+name = "pywin32"
+version = "312"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/f5/10a6e845a00fc5e7afd0a988b744f403d4d57162a28d160a093c4d9322f0/pywin32-312-cp311-cp311-win32.whl", hash = "sha256:17948aeadbdb091f0ced6ef0841620794e68327b94ee415571c1203594b7215c", size = 6362659, upload-time = "2026-06-04T07:49:21.349Z" },
+    { url = "https://files.pythonhosted.org/packages/35/c4/dcd2d62b5944b6d5db53413a5899016ccd57ffcb7278f3f81655d25d2027/pywin32-312-cp311-cp311-win_amd64.whl", hash = "sha256:d11417d84412f859b722fad0841b3614459ed0047f7542d8362e77884f6b6e8a", size = 6928825, upload-time = "2026-06-04T07:49:23.934Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/56/3cbb433fe4501cdba2eb9040f56a4e1a8243faa4186b25295564d1a7a79d/pywin32-312-cp311-cp311-win_arm64.whl", hash = "sha256:b2200a054ca6d6625c4842fc56a4976a4b47f96b73dbe5538c3f813a80359f47", size = 6721875, upload-time = "2026-06-04T07:49:26.416Z" },
 ]
 
 [[package]]
