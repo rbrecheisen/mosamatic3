@@ -64,11 +64,13 @@ def clean_filename_part(value: str, fallback: str) -> str:
 def patient_id_from_relative_path(relative_path: str, part_index: int, fallback: str) -> str:
     parts = Path(relative_path).parts
     directory_parts = parts[:-1]
+    if part_index < 0:
+        return clean_filename_part(fallback, 'single_scan')
     if directory_parts and 0 <= part_index < len(directory_parts):
         return clean_filename_part(directory_parts[part_index], fallback)
     if directory_parts:
         return clean_filename_part(directory_parts[0], fallback)
-    return clean_filename_part(fallback, 'unknown_patient')
+    return clean_filename_part(fallback, 'single_scan')
 
 
 def find_candidate_scans(dataset: Dataset, user_id: str) -> dict[str, CandidateScan]:
@@ -308,7 +310,7 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
 
     output_files = [
         OutputDatasetFile(
-            relative_path=f'selected_slices/{prefix}{extension}',
+            relative_path=f'{prefix}{extension}',
             content=selected_slice.read_bytes(),
         )
     ]
@@ -316,14 +318,14 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
     if create_review_pngs:
         output_files.append(
             OutputDatasetFile(
-                relative_path=f'review/{prefix}_axial.png',
+                relative_path=f'{prefix}_axial.png',
                 content=dicom_to_png_bytes(selected_slice),
             )
         )
         mask_file = mask_dir / f'vertebrae_{params.vertebral_level}.nii.gz'
         output_files.append(
             OutputDatasetFile(
-                relative_path=f'review/{prefix}_sagittal.png',
+                relative_path=f'{prefix}_sagittal.png',
                 content=sagittal_review_png_bytes(scan.path, mask_file, z_vertebra),
             )
         )
@@ -332,7 +334,7 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
         status='completed',
         patient_id=patient_id,
         selected_slice=str(selected_slice.name),
-        selected_slice_relative_output=f'selected_slices/{prefix}{extension}',
+        selected_slice_relative_output=f'{prefix}{extension}',
         selected_z_position_mm=z_vertebra,
     )
     return output_files, result

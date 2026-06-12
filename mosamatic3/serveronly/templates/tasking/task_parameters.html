@@ -16,7 +16,17 @@
 const taskKey = '{{ task.key }}';
 const schema = JSON.parse(document.getElementById('schema-data').textContent);
 const saved = JSON.parse(document.getElementById('saved-data').textContent || '{}');
-const datasets = [{% for d in datasets %}{id:'{{ d.id }}', name:'{{ d.name|escapejs }}'},{% endfor %}];
+// const datasets = [{% for d in datasets %}{id:'{{ d.id }}', name:'{{ d.name|escapejs }}'},{% endfor %}];
+const datasets = [
+  {% for d in datasets %}
+    {
+      id: '{{ d.id }}',
+      name: '{{ d.name|escapejs }}',
+      kind: '{{ d.kind }}',
+      status: '{{ d.status }}'
+    },
+  {% endfor %}
+];
 const fields = document.getElementById('fields');
 const message = document.getElementById('task-message');
 const runButton = document.getElementById('run-button');
@@ -24,17 +34,28 @@ const cancelButton = document.getElementById('cancel-button');
 let activeTaskId = null;
 function show(text){ message.style.display='block'; message.textContent=text; }
 function buildField(name, prop){
-  const label = document.createElement('label'); label.textContent = prop.title || name;
+  const label = document.createElement('label');
+  label.classList.add('parameter-field');
+  label.textContent = prop.title || name;
   let input;
   const widget = prop.ui_widget || prop?.json_schema_extra?.ui_widget;
   if (widget === 'dataset_select') {
     input = document.createElement('select'); input.name = name;
-    input.innerHTML = '<option value="">Select dataset...</option>' + datasets.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    // input.innerHTML = '<option value="">Select dataset...</option>' + datasets.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    input.innerHTML =
+      '<option value="">Select dataset...</option>' +
+      datasets
+        .map(d => `<option value="${d.id}">${d.name} (${d.kind}, ${d.status})</option>`)
+        .join('');
   } else if (widget === 'dataset_multiselect') {
     input = document.createElement('select'); input.name = name; input.multiple = true;
-    input.innerHTML = datasets.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    // input.innerHTML = datasets.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    input.innerHTML = datasets
+      .map(d => `<option value="${d.id}">${d.name} (${d.kind}, ${d.status})</option>`)
+      .join('');
   } else if (prop.type === 'boolean') {
-    label.className='checkbox-row'; input = document.createElement('input'); input.type='checkbox'; input.name=name;
+    label.classList.add('checkbox-row');
+    input = document.createElement('input'); input.type='checkbox'; input.name=name;
   } else if (prop.enum) {
     input = document.createElement('select'); input.name=name; input.innerHTML = prop.enum.map(v => `<option value="${v}">${v}</option>`).join('');
   } else {
@@ -50,7 +71,22 @@ runButton.disabled = Object.keys(saved).length === 0;
 document.getElementById('params-form').addEventListener('submit', async (event)=>{
   event.preventDefault();
   const params = {};
-  fields.querySelectorAll('input, select').forEach(el => { params[el.name] = el.type === 'checkbox' ? el.checked : (el.multiple ? Array.from(el.selectedOptions).map(o => o.value) : (el.value === '' ? null : (el.type === 'number' ? Number(el.value) : el.value))); });
+  // fields.querySelectorAll('input, select').forEach(el => { params[el.name] = el.type === 'checkbox' ? el.checked : (el.multiple ? Array.from(el.selectedOptions).map(o => o.value) : (el.value === '' ? null : (el.type === 'number' ? Number(el.value) : el.value))); });
+  fields.querySelectorAll('input, select').forEach(el => {
+    const prop = schema.properties[el.name];
+
+    if (el.type === 'checkbox') {
+      params[el.name] = el.checked;
+    } else if (el.multiple) {
+      params[el.name] = Array.from(el.selectedOptions).map(o => o.value);
+    } else if (el.value === '') {
+      params[el.name] = prop.type === 'string' ? '' : null;
+    } else if (el.type === 'number') {
+      params[el.name] = Number(el.value);
+    } else {
+      params[el.name] = el.value;
+    }
+  });
   const response = await fetch(`/api/tasks/${taskKey}/parameters`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':window.csrfToken}, body:JSON.stringify({task_key:taskKey, parameters:params})});
   if(response.ok){ show('Parameters saved.'); runButton.disabled=false; } else show(await response.text());
 });

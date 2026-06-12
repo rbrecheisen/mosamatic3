@@ -77,14 +77,30 @@ button.success,
   text-decoration: none;
 }
 
-.data-table td:nth-child(2),
-.data-table th:nth-child(2) {
-  width: 120px;
+.analysis-table {
+  table-layout: fixed;
 }
 
-.data-table td:nth-child(4),
-.data-table th:nth-child(4) {
-  width: 190px;
+.analysis-table .task-name-column {
+  width: 260px;
+}
+
+.analysis-table .task-description-column {
+  width: auto;
+}
+
+.analysis-table .task-actions-column {
+  width: 170px;
+  text-align: right;
+}
+
+.analysis-table .task-description-column {
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.analysis-table .button-like {
+  white-space: nowrap;
 }
 
 input,
@@ -358,6 +374,19 @@ td {
 a.button-like { text-decoration: none; }
 .error { color: #b42318; }
 .success { color: #16a34a; }
+
+.parameter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;        /* space between label text and its field */
+  margin-bottom: 1.25rem; /* space between this field and next label */
+}
+
+.parameter-field.checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
 
 body {
   border-top: 10px solid red;

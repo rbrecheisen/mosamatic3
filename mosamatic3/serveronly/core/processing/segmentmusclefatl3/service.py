@@ -6,10 +6,10 @@ from io import BytesIO
 from pathlib import Path
 from celery.exceptions import Ignore
 
-from ...common.dicom import load_dicom, get_pixels_from_dicom_object
+from ...common.dicom import load_dicom, get_pixels_from_dicom_object, is_dicom
 from ...common.utils import normalize_between, convert_labels_to_157
 from ...datasets.serializers import DatasetSerializer
-from ...datasets.services import OutputDatasetFile, get_dataset_file_path
+from ...datasets.services import OutputDatasetFile, get_dataset_file_path, dataset_upload_root, safe_relative_path
 from ...models import Dataset
 from ...tasking.runtime import TaskRuntime
 from ...tasking.schemas import SegmentMuscleFatL3TensorFlowTaskParameters
@@ -23,30 +23,6 @@ class ParamLoader:
     @property
     def dict(self):
         return self.__dict__
-
-
-# def normalize_between(image: np.ndarray, min_value: float, max_value: float) -> np.ndarray:
-#     image = np.asarray(image, dtype=np.float32)
-#     image = np.clip(image, min_value, max_value)
-#     denominator = max_value - min_value
-#     if denominator == 0:
-#         return np.zeros_like(image, dtype=np.float32)
-#     return (image - min_value) / denominator
-
-
-# def get_pixels_from_dicom_object(dicom_object) -> np.ndarray:
-#     pixels = dicom_object.pixel_array.astype(np.float32)
-#     slope = float(getattr(dicom_object, 'RescaleSlope', 1))
-#     intercept = float(getattr(dicom_object, 'RescaleIntercept', 0))
-#     return pixels * slope + intercept
-
-
-# def convert_labels_to_157(labels: np.ndarray) -> np.ndarray:
-#     converted = np.zeros_like(labels, dtype=np.uint8)
-#     converted[labels == 1] = 1
-#     converted[labels == 2] = 5
-#     converted[labels == 3] = 7
-#     return converted
 
 
 def find_model_files(model_dataset: Dataset, user_id: str, model_version: str) -> tuple[Path, Path | None, Path]:
@@ -197,13 +173,17 @@ def process_dicom_file(
         probabilities=probabilities,
     )
 
-    source_name = Path(relative_path).name
+    source_path = Path(relative_path)
+    source_name = source_path.name
+    safe_prefix = "_".join(source_path.parts[:-1])
+    safe_prefix = safe_prefix.replace(" ", "_")
+    flat_name = f"{safe_prefix}_{source_name}" if safe_prefix else source_name
 
     if probabilities:
-        segmentation_relative_path = f'segmentations/{source_name}_prob.seg.npy'
+        segmentation_relative_path = f'{flat_name}_prob.seg.npy'
     else:
         segmentation = convert_labels_to_157(segmentation)
-        segmentation_relative_path = f'segmentations/{source_name}.seg.npy'
+        segmentation_relative_path = f'{flat_name}.seg.npy'
 
     output_files = [
         numpy_to_output_file(segmentation_relative_path, segmentation)
@@ -212,12 +192,69 @@ def process_dicom_file(
     if copy_input_dicoms:
         output_files.append(
             OutputDatasetFile(
-                relative_path=f'input_dicoms/{source_name}',
+                relative_path=f'{flat_name}',
                 content=dicom_path.read_bytes(),
             )
         )
 
     return output_files
+
+
+def normalize_path_prefix(prefix: str | None) -> str:
+    value = (prefix or '').strip().replace('\\', '/').strip('/')
+    return f'{value}/' if value else ''
+
+
+def get_slice_select_manifest_selected_files(dataset: Dataset) -> list[str]:
+    if dataset.source_task_key != 'sliceselect':
+        return []
+
+    manifest_path = (
+        dataset_upload_root(dataset.owner_id, dataset.id)
+        / safe_relative_path(SLICE_SELECT_MANIFEST_RELATIVE_PATH)
+    )
+
+    if not manifest_path.exists():
+        return []
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    except Exception:
+        return []
+
+    selected_files: list[str] = []
+
+    for scan in manifest.get('scans', {}).values():
+        if scan.get('status') != 'completed':
+            continue
+
+        selected = scan.get('selected_slice_relative_output')
+        if selected:
+            selected_files.append(selected)
+
+    existing_paths = set(dataset.files.values_list('relative_path', flat=True))
+    return [path for path in selected_files if path in existing_paths]
+
+
+def get_segment_input_dataset_files(dataset: Dataset, user_id: str, input_path_prefix: str):
+    prefix = normalize_path_prefix(input_path_prefix)
+    dataset_files = list(dataset.files.all())
+    if prefix:
+        dataset_files = [
+            file
+            for file in dataset_files
+            if file.relative_path.replace('\\', '/').startswith(prefix)
+        ]
+    dicom_files = []
+    for dataset_file in dataset_files:
+        path = get_dataset_file_path(
+            user_id,
+            dataset.id,
+            dataset_file.relative_path,
+        )
+        if is_dicom(path):
+            dicom_files.append(dataset_file)
+    return dicom_files
 
 
 def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, celery_task=None) -> dict:
@@ -250,7 +287,13 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
             model_version=params.model_version,
         )
 
-        total = image_dataset.files.count()
+        input_files = get_segment_input_dataset_files(
+            image_dataset,
+            user_id,
+            params.input_path_prefix,
+        )
+
+        total = len(input_files)
         output_files: list[OutputDatasetFile] = []
 
         runtime.update_progress(
@@ -259,13 +302,24 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
             message=f'Starting muscle/fat segmentation for {total} DICOM files',
         )
 
-        for item in runtime.iter_dataset_files(
-            image_dataset,
-            message_factory=lambda current, total: f'Segmented DICOM file {current} of {total}',
-        ):
+        for index, dataset_file in enumerate(input_files):
+            current = index + 1
+
+            runtime.check_cancelled(
+                current=index,
+                total=total,
+                message=f'Segment muscle/fat task cancelled after {index} of {total} files',
+            )
+
+            dicom_path = get_dataset_file_path(
+                user_id,
+                image_dataset.id,
+                dataset_file.relative_path,
+            )
+
             files = process_dicom_file(
-                dicom_path=item.path,
-                relative_path=item.file.relative_path,
+                dicom_path=dicom_path,
+                relative_path=dataset_file.relative_path,
                 model=model,
                 contour_model=contour_model,
                 model_params=model_params,
@@ -273,6 +327,34 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
                 copy_input_dicoms=params.copy_input_dicoms,
             )
             output_files.extend(files)
+
+            runtime.update_progress(
+                current=current,
+                total=total,
+                message=f'Segmented DICOM file {current} of {total}',
+            )
+
+        # total = image_dataset.files.count()
+        # output_files: list[OutputDatasetFile] = []
+        # runtime.update_progress(
+        #     current=0,
+        #     total=total,
+        #     message=f'Starting muscle/fat segmentation for {total} DICOM files',
+        # )
+        # for item in runtime.iter_dataset_files(
+        #     image_dataset,
+        #     message_factory=lambda current, total: f'Segmented DICOM file {current} of {total}',
+        # ):
+        #     files = process_dicom_file(
+        #         dicom_path=item.path,
+        #         relative_path=item.file.relative_path,
+        #         model=model,
+        #         contour_model=contour_model,
+        #         model_params=model_params,
+        #         probabilities=params.probabilities,
+        #         copy_input_dicoms=params.copy_input_dicoms,
+        #     )
+        #     output_files.extend(files)
 
         output_dataset = runtime.create_output_dataset(
             name=f'Segment Muscle/Fat L3 TensorFlow output - {image_dataset.name}',
