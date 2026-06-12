@@ -71,7 +71,32 @@ class SegmentMuscleFatL3TensorFlowTaskParameters(BaseModel):
     title='Output probabilities',
     description='If enabled, stores probability maps instead of hard segmentation labels',
   )
-  copy_input_dicoms: bool = Field(
-    default=True,
-    title='Copy input DICOMs to output',
+
+
+class CalculateScoresTaskParameters(BaseModel):
+  input_dataset_id: UUID = Field(
+    title='Input dataset',
+    description='Dataset containing both DICOM images and .seg.npy segmentation files.',
+    json_schema_extra={'ui_widget': 'dataset_select', 'dataset_reference': True},
+  )
+  patient_info_dataset_id: UUID | None = Field(
+    default=None,
+    title='Patient info dataset',
+    description='Optional dataset containing a CSV file with columns: file, height, weight, sex, age.',
+    json_schema_extra={'ui_widget': 'dataset_select', 'dataset_reference': True},
+  )
+  patient_info_relative_path: str | None = Field(
+    default='',
+    title='Patient info CSV relative path',
+    description='Optional CSV path inside the patient info dataset. Leave empty if the dataset contains exactly one CSV file.',
+  )
+  file_type: Literal['npy', 'tag'] = Field(
+    default='npy',
+    title='Segmentation file type',
+    description='Use npy for .seg.npy files, tag for .tag files.',
+  )
+  input_path_prefix: str | None = Field(
+    default='',
+    title='Input path prefix',
+    description='Optional subfolder/prefix inside the input dataset. Leave empty for root/all files.',
   )

@@ -142,7 +142,6 @@ def process_dicom_file(
     contour_model,
     model_params: ParamLoader,
     probabilities: bool,
-    copy_input_dicoms: bool,
 ) -> list[OutputDatasetFile]:
     dicom_object = load_dicom(dicom_path)
     if dicom_object is None:
@@ -189,13 +188,12 @@ def process_dicom_file(
         numpy_to_output_file(segmentation_relative_path, segmentation)
     ]
 
-    if copy_input_dicoms:
-        output_files.append(
-            OutputDatasetFile(
-                relative_path=f'{flat_name}',
-                content=dicom_path.read_bytes(),
-            )
+    output_files.append(
+        OutputDatasetFile(
+            relative_path=f'{flat_name}',
+            content=dicom_path.read_bytes(),
         )
+    )
 
     return output_files
 
@@ -205,35 +203,28 @@ def normalize_path_prefix(prefix: str | None) -> str:
     return f'{value}/' if value else ''
 
 
-def get_slice_select_manifest_selected_files(dataset: Dataset) -> list[str]:
-    if dataset.source_task_key != 'sliceselect':
-        return []
-
-    manifest_path = (
-        dataset_upload_root(dataset.owner_id, dataset.id)
-        / safe_relative_path(SLICE_SELECT_MANIFEST_RELATIVE_PATH)
-    )
-
-    if not manifest_path.exists():
-        return []
-
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    except Exception:
-        return []
-
-    selected_files: list[str] = []
-
-    for scan in manifest.get('scans', {}).values():
-        if scan.get('status') != 'completed':
-            continue
-
-        selected = scan.get('selected_slice_relative_output')
-        if selected:
-            selected_files.append(selected)
-
-    existing_paths = set(dataset.files.values_list('relative_path', flat=True))
-    return [path for path in selected_files if path in existing_paths]
+# def get_slice_select_manifest_selected_files(dataset: Dataset) -> list[str]:
+#     if dataset.source_task_key != 'sliceselect':
+#         return []
+#     manifest_path = (
+#         dataset_upload_root(dataset.owner_id, dataset.id)
+#         / safe_relative_path(SLICE_SELECT_MANIFEST_RELATIVE_PATH)
+#     )
+#     if not manifest_path.exists():
+#         return []
+#     try:
+#         manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+#     except Exception:
+#         return []
+#     selected_files: list[str] = []
+#     for scan in manifest.get('scans', {}).values():
+#         if scan.get('status') != 'completed':
+#             continue
+#         selected = scan.get('selected_slice_relative_output')
+#         if selected:
+#             selected_files.append(selected)
+#     existing_paths = set(dataset.files.values_list('relative_path', flat=True))
+#     return [path for path in selected_files if path in existing_paths]
 
 
 def get_segment_input_dataset_files(dataset: Dataset, user_id: str, input_path_prefix: str):
@@ -324,7 +315,6 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
                 contour_model=contour_model,
                 model_params=model_params,
                 probabilities=params.probabilities,
-                copy_input_dicoms=params.copy_input_dicoms,
             )
             output_files.extend(files)
 
@@ -333,28 +323,6 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
                 total=total,
                 message=f'Segmented DICOM file {current} of {total}',
             )
-
-        # total = image_dataset.files.count()
-        # output_files: list[OutputDatasetFile] = []
-        # runtime.update_progress(
-        #     current=0,
-        #     total=total,
-        #     message=f'Starting muscle/fat segmentation for {total} DICOM files',
-        # )
-        # for item in runtime.iter_dataset_files(
-        #     image_dataset,
-        #     message_factory=lambda current, total: f'Segmented DICOM file {current} of {total}',
-        # ):
-        #     files = process_dicom_file(
-        #         dicom_path=item.path,
-        #         relative_path=item.file.relative_path,
-        #         model=model,
-        #         contour_model=contour_model,
-        #         model_params=model_params,
-        #         probabilities=params.probabilities,
-        #         copy_input_dicoms=params.copy_input_dicoms,
-        #     )
-        #     output_files.extend(files)
 
         output_dataset = runtime.create_output_dataset(
             name=f'Segment Muscle/Fat L3 TensorFlow output - {image_dataset.name}',

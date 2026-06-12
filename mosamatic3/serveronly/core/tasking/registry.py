@@ -4,6 +4,7 @@ from .schemas import (
   RescaleDicomImagesTaskParameters,
   SliceSelectTaskParameters,
   SegmentMuscleFatL3TensorFlowTaskParameters,
+  CalculateScoresTaskParameters,
 )
 
 TASKS = {
@@ -34,5 +35,12 @@ TASKS = {
     description='Segments muscle and fat tissue on selected L3 DICOM slices using TensorFlow models',
     celery_task_name='core.processing.tasks.run_segmentmusclefatl3tensorflowtask',
     parameter_schema=SegmentMuscleFatL3TensorFlowTaskParameters,
+  ),
+  'calculatescores': TaskDefinition(
+    key='calculatescores',
+    name='Calculate Scores',
+    description='Calculates body-composition scores from DICOM images and muscle/fat segmentations',
+    celery_task_name='core.processing.tasks.run_calculatescorestask',
+    parameter_schema=CalculateScoresTaskParameters,
   ),
 }
