@@ -152,6 +152,7 @@ def start_task_by_key(task_key: str, user) -> dict[str, str]:
         task.celery_task_name,
         args=[parameters, str(user.id)],
         task_id=celery_task_id,
+        queue='tasks',
     )
 
     return {

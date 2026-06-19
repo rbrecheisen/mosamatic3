@@ -545,6 +545,7 @@ def run_calculate_scores_task(parameters: dict, user_id: str, celery_task=None) 
             'message': 'Calculate scores task completed',
             'parameters': params.model_dump(mode='json'),
             'output_datasets': [DatasetSerializer(output_dataset).data],
+            'output_dataset_id': str(output_dataset.id),
         }
 
     except Ignore:

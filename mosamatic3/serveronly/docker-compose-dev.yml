@@ -35,9 +35,33 @@ services:
     depends_on:
       - redis
 
-  worker:
+  # worker:
+  #   build: .
+  #   container_name: mosamatic3-django-worker
+  #   environment:
+  #     SECRET_KEY: change-me-in-production
+  #     DEBUG: "0"
+  #     ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+  #     DATABASE_URL: sqlite:////data/app.db
+  #     UPLOAD_ROOT: /data/uploads
+  #     STATIC_ROOT: /staticfiles
+  #     ADMIN_USERNAME: admin
+  #     ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+  #     CELERY_BROKER_URL: redis://redis:6379/0
+  #     CELERY_RESULT_BACKEND: redis://redis:6379/0
+  #     CELERY_LOGLEVEL: info
+  #     CELERY_POOL: solo
+  #   volumes:
+  #     - server_data:/data
+  #     - staticfiles:/staticfiles
+  #     - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
+  #   command: ["/app/docker/entrypoint-worker.sh"]
+  #   depends_on:
+  #     - redis
+
+  pipeline-worker:
     build: .
-    container_name: mosamatic3-django-worker
+    container_name: mosamatic3-django-pipeline-worker
     environment:
       SECRET_KEY: change-me-in-production
       DEBUG: "0"
@@ -51,6 +75,34 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       CELERY_LOGLEVEL: info
       CELERY_POOL: solo
+      CELERY_QUEUE: pipeline
+      CELERY_WORKER_NAME: pipeline
+    volumes:
+      - server_data:/data
+      - staticfiles:/staticfiles
+      - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
+    command: ["/app/docker/entrypoint-worker.sh"]
+    depends_on:
+      - redis
+
+  task-worker:
+    build: .
+    container_name: mosamatic3-django-task-worker
+    environment:
+      SECRET_KEY: change-me-in-production
+      DEBUG: "0"
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      DATABASE_URL: sqlite:////data/app.db
+      UPLOAD_ROOT: /data/uploads
+      STATIC_ROOT: /staticfiles
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_LOGLEVEL: info
+      CELERY_POOL: solo
+      CELERY_QUEUE: tasks
+      CELERY_WORKER_NAME: tasks
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles

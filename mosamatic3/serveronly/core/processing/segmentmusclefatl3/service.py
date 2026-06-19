@@ -342,6 +342,7 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
             'message': 'Segment muscle/fat L3 TensorFlow task completed',
             'parameters': params.model_dump(mode='json'),
             'output_datasets': [DatasetSerializer(output_dataset).data],
+            'output_dataset_id': str(output_dataset.id),
         }
 
     except Ignore:

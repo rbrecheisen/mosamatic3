@@ -23,3 +23,16 @@ def mark_task_run_status(celery_task_id: str | None, status: str) -> None:
     if celery_task_id is None:
         return
     TaskRun.objects.filter(celery_task_id=celery_task_id).update(status=status, updated_at=timezone.now())
+
+def request_task_cancel_by_celery_id(celery_task_id: str):
+    task_run = TaskRun.objects.filter(celery_task_id=celery_task_id).first()
+
+    if task_run is None:
+        return None
+
+    task_run.cancel_requested = True
+    task_run.status = 'cancel_requested'
+    task_run.updated_at = timezone.now()
+    task_run.save(update_fields=['cancel_requested', 'status', 'updated_at'])
+
+    return task_run

@@ -7,6 +7,7 @@ from core.datasets import apiviews as dataset_api_views
 from core.forms import apiviews as form_api_views
 from core.tasking import apiviews as task_api_views
 from core.adminpanel import apiviews as admin_api_views
+from core.pipelines import apiviews as pipeline_api_views
 
 
 urlpatterns = [
@@ -14,6 +15,7 @@ urlpatterns = [
     path("", include("core.accounts.urls")),
     path("", include("core.datasets.urls")),
     path("", include("core.tasking.urls")),
+    path("", include("core.pipelines.urls")),
     path("", include("core.adminpanel.urls")),
 
     path("api/health", health),
@@ -35,6 +37,11 @@ urlpatterns = [
     path("api/tasks/<str:task_key>/run", task_api_views.task_run),
     path("api/tasks/<str:task_id>", task_api_views.task_status),
     path("api/tasks/<str:task_id>/cancel", task_api_views.task_cancel),
+
+    path("api/pipelines", pipeline_api_views.pipeline_list),
+    path("api/pipelines/run", pipeline_api_views.pipeline_run),
+    path("api/pipelines/<uuid:pipeline_run_id>", pipeline_api_views.pipeline_status),
+    path("api/pipelines/<uuid:pipeline_run_id>/cancel", pipeline_api_views.pipeline_cancel),
 
     path("api/admin/summary", admin_api_views.admin_summary),
     path("api/admin/users", admin_api_views.admin_users),

@@ -1,0 +1,49 @@
+{
+  "name": "Default body composition pipeline",
+  "version": 1,
+  "steps": [
+    {
+      "id": "rescale",
+      "task_key": "rescaledicomimages",
+      "input_parameter": "dataset_id",
+      "input_dataset": "$initial_dataset",
+      "parameters": {
+        "target_size": 512
+      }
+    },
+    {
+      "id": "sliceselect",
+      "task_key": "sliceselect",
+      "input_parameter": "dataset_id",
+      "input_dataset": "$steps.rescale.output_dataset",
+      "parameters": {
+        "vertebral_level": "L3",
+        "patient_id_path_part_index": 1
+      }
+    },
+    {
+      "id": "segment",
+      "task_key": "segmentmusclefatl3tensorflow",
+      "input_parameter": "dataset_id",
+      "input_dataset": "$steps.sliceselect.output_dataset",
+      "parameters": {
+        "model_files_dataset_id": null,
+        "model_version": "1",
+        "input_path_prefix": "",
+        "probabilities": false
+      }
+    },
+    {
+      "id": "calculatescores",
+      "task_key": "calculatescores",
+      "input_parameter": "input_dataset_id",
+      "input_dataset": "$steps.segment.output_dataset",
+      "parameters": {
+        "patient_info_dataset_id": null,
+        "patient_info_relative_path": "",
+        "file_type": "npy",
+        "input_path_prefix": ""
+      }
+    }
+  ]
+}

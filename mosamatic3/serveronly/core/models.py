@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 class Dataset(models.Model):
+    KIND_INPUT = 'input'
+    KIND_OUTPUT = 'output'
     KIND_CHOICES = [('input', 'Input'), ('output', 'Output')]
     STATUS_CHOICES = [
         ('ready', 'Ready'),
@@ -87,6 +89,120 @@ class TaskRun(models.Model):
     cancel_requested = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
+
+class PipelineRun(models.Model):
+    STATUS_PENDING = "PENDING"
+    STATUS_RUNNING = "RUNNING"
+    STATUS_SUCCESS = "SUCCESS"
+    STATUS_FAILURE = "FAILURE"
+    STATUS_CANCELED = "CANCELED"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, STATUS_PENDING),
+        (STATUS_RUNNING, STATUS_RUNNING),
+        (STATUS_SUCCESS, STATUS_SUCCESS),
+        (STATUS_FAILURE, STATUS_FAILURE),
+        (STATUS_CANCELED, STATUS_CANCELED),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="pipeline_runs",
+    )
+
+    name = models.CharField(max_length=255)
+    config = models.JSONField()
+
+    initial_dataset = models.ForeignKey(
+        "Dataset",
+        on_delete=models.PROTECT,
+        related_name="pipeline_runs_as_initial_input",
+    )
+
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+
+    current_step_id = models.CharField(max_length=255, blank=True, null=True)
+    error_message = models.TextField(blank=True)
+    is_cancel_requested = models.BooleanField(default=False, db_index=True)
+
+    celery_task_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(blank=True, null=True)
+    finished_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"
+
+
+class PipelineStepRun(models.Model):
+    STATUS_PENDING = "PENDING"
+    STATUS_RUNNING = "RUNNING"
+    STATUS_SUCCESS = "SUCCESS"
+    STATUS_FAILURE = "FAILURE"
+    STATUS_CANCELED = "CANCELED"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    pipeline_run = models.ForeignKey(
+        PipelineRun,
+        on_delete=models.CASCADE,
+        related_name="step_runs",
+    )
+
+    step_id = models.CharField(max_length=255)
+    task_key = models.CharField(max_length=100, db_index=True)
+
+    status = models.CharField(max_length=32, default=STATUS_PENDING, db_index=True)
+    celery_task_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+
+    input_dataset = models.ForeignKey(
+        "Dataset",
+        on_delete=models.PROTECT,
+        related_name="pipeline_step_inputs",
+        blank=True,
+        null=True,
+    )
+
+    output_dataset = models.ForeignKey(
+        "Dataset",
+        on_delete=models.PROTECT,
+        related_name="pipeline_step_outputs",
+        blank=True,
+        null=True,
+    )
+
+    parameters = models.JSONField(default=dict)
+    error_message = models.TextField(blank=True)
+
+    order = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(default=timezone.now)
+    started_at = models.DateTimeField(blank=True, null=True)
+    finished_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["order", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pipeline_run", "step_id"],
+                name="uq_pipeline_step_id_per_run",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.pipeline_run.name}: {self.step_id} ({self.status})"
 
 class FormSubmission(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

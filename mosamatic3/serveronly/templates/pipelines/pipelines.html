@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Pipelines</h2>
+  <p class="muted">Run a predefined sequence of analysis tasks on an input dataset.</p>
+
+  <form id="pipeline-form" class="stack">
+    {% csrf_token %}
+
+    <label>
+      Pipeline
+      <select id="pipeline-config" name="config_key" required>
+        {% for pipeline in pipeline_configs %}
+          <option value="{{ pipeline.key }}">{{ pipeline.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      Initial input dataset
+      <select id="initial-dataset" name="initial_dataset_id" required>
+        {% for dataset in input_datasets %}
+          <option value="{{ dataset.id }}">{{ dataset.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <button type="submit">Run pipeline</button>
+  </form>
+
+  <p id="pipeline-message" class="message" style="display:none"></p>
+</section>
+
+<section class="card">
+  <h3>Pipeline runs</h3>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Current step</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in pipeline_runs %}
+        <tr>
+          <td>{{ run.name }}</td>
+          <td class="pipeline-status">{{ run.status }}</td>
+          <td>{{ run.current_step_id|default:"-" }}</td>
+          <td>{{ run.created_at }}</td>
+          <td>
+            {% if run.status == "PENDING" or run.status == "RUNNING" %}
+              <button type="button" class="cancel-pipeline-button" data-id="{{ run.id }}">
+                Cancel
+              </button>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" class="muted">No pipeline runs yet.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script>
+const form = document.getElementById("pipeline-form");
+const message = document.getElementById("pipeline-message");
+
+function getCsrfToken() {
+  return document.querySelector("[name=csrfmiddlewaretoken]").value;
+}
+
+function showMessage(text, isError = false) {
+  message.style.display = "block";
+  message.textContent = text;
+  message.classList.toggle("error", isError);
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const response = await fetch("/api/pipelines/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCsrfToken(),
+    },
+    body: JSON.stringify({
+      config_key: document.getElementById("pipeline-config").value,
+      initial_dataset_id: document.getElementById("initial-dataset").value,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    showMessage("Failed to start pipeline: " + text, true);
+    return;
+  }
+
+  const data = await response.json();
+  showMessage("Pipeline started: " + data.pipeline_run_id);
+
+  setTimeout(() => window.location.reload(), 1000);
+});
+
+document.querySelectorAll(".cancel-pipeline-button").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const pipelineRunId = button.dataset.id;
+
+    const response = await fetch(`/api/pipelines/${pipelineRunId}/cancel`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": getCsrfToken(),
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      showMessage("Failed to cancel pipeline: " + text, true);
+      return;
+    }
+
+    showMessage("Cancel requested.");
+    setTimeout(() => window.location.reload(), 1000);
+  });
+});
+
+const hasRunningPipeline = Array.from(document.querySelectorAll(".pipeline-status"))
+  .some((el) => ["PENDING", "RUNNING"].includes(el.textContent.trim()));
+
+if (hasRunningPipeline) {
+  setTimeout(() => window.location.reload(), 3000);
+}
+</script>
+{% endblock %}

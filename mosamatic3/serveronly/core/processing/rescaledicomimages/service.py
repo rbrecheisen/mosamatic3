@@ -63,6 +63,7 @@ def run_rescale_dicom_images_task(parameters: dict, user_id: str, celery_task=No
             'message': 'Rescale DICOM images task completed',
             'parameters': params.model_dump(mode='json'),
             'output_datasets': [DatasetSerializer(output_dataset).data],
+            'output_dataset_id': str(output_dataset.id),
         }
     except Ignore:
         raise
