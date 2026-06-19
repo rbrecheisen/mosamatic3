@@ -317,7 +317,7 @@ def create_dicom_png_output_file(
 
     return file_to_output_file(
         source_path=png_path,
-        relative_path=f'png/{png_name}',
+        relative_path=f'{png_name}',
     )
 
 
@@ -341,7 +341,7 @@ def create_segmentation_png_output_file(
 
     return file_to_output_file(
         source_path=png_path,
-        relative_path=f'png/{png_name}',
+        relative_path=f'{png_name}',
     )
 
 
@@ -418,8 +418,7 @@ def run_calculate_scores_task(parameters: dict, user_id: str, celery_task=None) 
         output_files: list[OutputDatasetFile] = []
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            png_output_dir = Path(temp_dir) / 'png'
-            png_output_dir.mkdir(parents=True, exist_ok=True)
+            png_output_dir = Path(temp_dir)
 
             for index, (dicom_file, segmentation_file) in enumerate(pairs):
                 current = index + 1
