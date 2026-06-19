@@ -1,4 +1,5 @@
 import shutil, zipfile
+from django.utils import timezone
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path, PurePosixPath
@@ -149,22 +150,6 @@ def create_output_dataset_for_user_id(name: str, files: list[OutputDatasetFile],
     if not files:
         raise ValueError('An output dataset must contain at least one file.')
     user = User.objects.get(id=user_id)
-    # dataset = Dataset.objects.create(
-    #     owner=user,
-    #     name=make_unique_dataset_name(name, user),
-    #     kind='output',
-    #     source_task_key=source_task_key,
-    #     source_task_id=source_task_id,
-    # )
-    # root = dataset_upload_root(user.id, dataset.id)
-    # root.mkdir(parents=True, exist_ok=False)
-    # for out in files:
-    #     relative = safe_relative_path(out.relative_path)
-    #     target_path = root / relative
-    #     target_path.parent.mkdir(parents=True, exist_ok=True)
-    #     target_path.write_bytes(out.content)
-    #     DatasetFile.objects.create(dataset=dataset, relative_path=relative.as_posix(), size_bytes=len(out.content))
-    # return dataset
     dataset = create_empty_output_dataset_for_user_id(
         name=name,
         user_id=user_id,
@@ -187,4 +172,6 @@ def create_dataset_zip_for_user(dataset_id, user):
             file_path = root / safe_relative_path(item.relative_path)
             if file_path.exists() and file_path.is_file():
                 zf.write(file_path, arcname=item.relative_path)
-    return f'{dataset.name}.zip'.replace('/', '_'), zip_buffer.getvalue()
+    timestamp = timezone.localtime().strftime('%Y%m%d_%H%M%S')
+    safe_name = dataset.name.replace('/', '_').replace('\\', '_')
+    return f'{safe_name}_{timestamp}.zip', zip_buffer.getvalue()
