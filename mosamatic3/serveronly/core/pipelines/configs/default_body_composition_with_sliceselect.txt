@@ -12,10 +12,20 @@
       }
     },
     {
+      "id": "sliceselect",
+      "task_key": "sliceselect",
+      "input_parameter": "dataset_id",
+      "input_dataset": "$steps.rescale.output_dataset",
+      "parameters": {
+        "vertebral_level": "L3",
+        "patient_id_path_part_index": 1
+      }
+    },
+    {
       "id": "segment",
       "task_key": "segmentmusclefatl3tensorflow",
       "input_parameter": "dataset_id",
-      "input_dataset": "$steps.rescale.output_dataset",
+      "input_dataset": "$steps.sliceselect.output_dataset",
       "parameters": {
         "model_files_dataset_id": null,
         "model_version": "1",

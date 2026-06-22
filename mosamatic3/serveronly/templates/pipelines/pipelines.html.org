@@ -3,34 +3,33 @@
 {% block content %}
 <section class="card">
   <h2>Pipelines</h2>
-  <p class="muted">Select a predefined pipeline configuration.</p>
+  <p class="muted">Run a predefined sequence of analysis tasks on an input dataset.</p>
 
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Version</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for pipeline in pipeline_configs %}
-        <tr>
-          <td>{{ pipeline.name }}</td>
-          <td>{{ pipeline.version|default:"-" }}</td>
-          <td>
-            <a class="button-like" href="{% url 'pipeline_detail' pipeline.key %}">
-              Configure / Run
-            </a>
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="3" class="muted">No pipeline configs found.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <form id="pipeline-form" class="stack">
+    {% csrf_token %}
+
+    <label>
+      Pipeline
+      <select id="pipeline-config" name="config_key" required>
+        {% for pipeline in pipeline_configs %}
+          <option value="{{ pipeline.key }}">{{ pipeline.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>
+      Initial input dataset
+      <select id="initial-dataset" name="initial_dataset_id" required>
+        {% for dataset in input_datasets %}
+          <option value="{{ dataset.id }}">{{ dataset.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <button type="submit">Run pipeline</button>
+  </form>
+
+  <p id="pipeline-message" class="message" style="display:none"></p>
 </section>
 
 <section class="card">
@@ -70,18 +69,48 @@
       {% endfor %}
     </tbody>
   </table>
-
-  <p id="pipeline-message" class="message" style="display:none"></p>
 </section>
 
 <script>
+const form = document.getElementById("pipeline-form");
 const message = document.getElementById("pipeline-message");
+
+function getCsrfToken() {
+  return document.querySelector("[name=csrfmiddlewaretoken]").value;
+}
 
 function showMessage(text, isError = false) {
   message.style.display = "block";
   message.textContent = text;
   message.classList.toggle("error", isError);
 }
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const response = await fetch("/api/pipelines/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCsrfToken(),
+    },
+    body: JSON.stringify({
+      config_key: document.getElementById("pipeline-config").value,
+      initial_dataset_id: document.getElementById("initial-dataset").value,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    showMessage("Failed to start pipeline: " + text, true);
+    return;
+  }
+
+  const data = await response.json();
+  showMessage("Pipeline started: " + data.pipeline_run_id);
+
+  setTimeout(() => window.location.reload(), 1000);
+});
 
 document.querySelectorAll(".cancel-pipeline-button").forEach((button) => {
   button.addEventListener("click", async () => {
@@ -90,7 +119,7 @@ document.querySelectorAll(".cancel-pipeline-button").forEach((button) => {
     const response = await fetch(`/api/pipelines/${pipelineRunId}/cancel`, {
       method: "POST",
       headers: {
-        "X-CSRFToken": window.csrfToken,
+        "X-CSRFToken": getCsrfToken(),
       },
     });
 

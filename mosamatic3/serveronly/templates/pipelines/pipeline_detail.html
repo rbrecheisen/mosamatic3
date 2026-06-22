@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>{{ config.name }}</h2>
+  <p class="muted">Configure pipeline parameters and run this pipeline.</p>
+
+  <form id="pipeline-form" class="stack">
+    {% csrf_token %}
+
+    <label class="parameter-field">
+      Initial input dataset
+      <select id="initial-dataset" name="initial_dataset_id" required>
+        <option value="">Select dataset...</option>
+        {% for dataset in input_datasets %}
+          <option value="{{ dataset.id }}">{{ dataset.name }} ({{ dataset.kind }}, {{ dataset.status }})</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <div id="pipeline-fields"></div>
+
+    <div class="row">
+      <button type="submit">Run pipeline</button>
+      <a class="button-like secondary" href="{% url 'pipelines' %}">Back</a>
+    </div>
+  </form>
+
+  <p id="pipeline-message" class="message" style="display:none"></p>
+</section>
+
+<script id="pipeline-steps-data" type="application/json">{{ form_steps_json|safe }}</script>
+
+<script>
+const configKey = "{{ config_key }}";
+const steps = JSON.parse(document.getElementById("pipeline-steps-data").textContent);
+
+const datasets = [
+  {% for d in datasets %}
+    {
+      id: "{{ d.id }}",
+      name: "{{ d.name|escapejs }}",
+      kind: "{{ d.kind }}",
+      status: "{{ d.status }}"
+    },
+  {% endfor %}
+];
+
+const fieldsContainer = document.getElementById("pipeline-fields");
+const message = document.getElementById("pipeline-message");
+
+function showMessage(text, isError = false) {
+  message.style.display = "block";
+  message.textContent = text;
+  message.classList.toggle("error", isError);
+}
+
+function getFieldType(prop) {
+  if (prop.type) return prop.type;
+
+  if (Array.isArray(prop.anyOf)) {
+    const nonNull = prop.anyOf.find((item) => item.type !== "null");
+    return nonNull ? nonNull.type : "string";
+  }
+
+  return "string";
+}
+
+function buildField(step, prop) {
+  const name = prop.name;
+  const type = getFieldType(prop);
+  const widget = prop.ui_widget || prop?.json_schema_extra?.ui_widget;
+
+  const label = document.createElement("label");
+  label.classList.add("parameter-field");
+  label.textContent = prop.title || name;
+
+  let input;
+
+  if (widget === "dataset_select") {
+    input = document.createElement("select");
+    input.innerHTML =
+      '<option value="">Select dataset...</option>' +
+      datasets
+        .map((d) => `<option value="${d.id}">${d.name} (${d.kind}, ${d.status})</option>`)
+        .join("");
+  } else if (prop.enum) {
+    input = document.createElement("select");
+    input.innerHTML = prop.enum
+      .map((v) => `<option value="${v}">${v}</option>`)
+      .join("");
+  } else if (type === "boolean") {
+    label.classList.add("checkbox-row");
+    input = document.createElement("input");
+    input.type = "checkbox";
+  } else {
+    input = document.createElement("input");
+    input.type = type === "integer" || type === "number" ? "number" : "text";
+
+    if (prop.minimum !== undefined) input.min = prop.minimum;
+    if (prop.maximum !== undefined) input.max = prop.maximum;
+  }
+
+  input.name = name;
+  input.dataset.stepId = step.id;
+
+  if (prop.required) {
+    input.required = true;
+  }
+
+  const current = prop.value;
+
+  if (input.type === "checkbox") {
+    input.checked = Boolean(current);
+  } else if (current !== undefined && current !== null) {
+    input.value = current;
+  }
+
+  if (prop.description) {
+    const help = document.createElement("small");
+    help.classList.add("muted");
+    help.textContent = prop.description;
+
+    label.appendChild(input);
+    label.appendChild(help);
+  } else {
+    label.appendChild(input);
+  }
+
+  return label;
+}
+
+function buildStepCard(step) {
+  const section = document.createElement("section");
+  section.classList.add("card");
+
+  const title = document.createElement("h3");
+  title.textContent = `${step.id}: ${step.task_name}`;
+  section.appendChild(title);
+
+  const description = document.createElement("p");
+  description.classList.add("muted");
+  description.textContent = step.description;
+  section.appendChild(description);
+
+  if (!step.fields.length) {
+    const empty = document.createElement("p");
+    empty.classList.add("muted");
+    empty.textContent = "No configurable parameters for this step.";
+    section.appendChild(empty);
+  }
+
+  step.fields.forEach((field) => {
+    section.appendChild(buildField(step, field));
+  });
+
+  return section;
+}
+
+steps.forEach((step) => {
+  fieldsContainer.appendChild(buildStepCard(step));
+});
+
+function collectOverrides() {
+  const overrides = {
+    steps: {}
+  };
+
+  fieldsContainer.querySelectorAll("input, select").forEach((el) => {
+    const stepId = el.dataset.stepId;
+    const name = el.name;
+
+    if (!overrides.steps[stepId]) {
+      overrides.steps[stepId] = {
+        parameters: {}
+      };
+    }
+
+    let value;
+
+    if (el.type === "checkbox") {
+      value = el.checked;
+    } else if (el.type === "number") {
+      value = el.value === "" ? null : Number(el.value);
+    } else {
+      value = el.value === "" ? null : el.value;
+    }
+
+    overrides.steps[stepId].parameters[name] = value;
+  });
+
+  return overrides;
+}
+
+document.getElementById("pipeline-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const response = await fetch("/api/pipelines/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": window.csrfToken,
+    },
+    body: JSON.stringify({
+      config_key: configKey,
+      initial_dataset_id: document.getElementById("initial-dataset").value,
+      overrides: collectOverrides(),
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    showMessage("Failed to start pipeline: " + text, true);
+    return;
+  }
+
+  const data = await response.json();
+  showMessage("Pipeline started: " + data.pipeline_run_id);
+
+  setTimeout(() => {
+    window.location.href = "{% url 'pipelines' %}";
+  }, 1000);
+});
+</script>
+{% endblock %}

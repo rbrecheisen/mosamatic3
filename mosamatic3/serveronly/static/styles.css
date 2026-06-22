@@ -391,3 +391,14 @@ a.button-like { text-decoration: none; }
 body {
   border-top: 10px solid red;
 }
+
+#pipeline-fields .card {
+  margin-top: 1rem;
+  background: #ffffff;
+  border: 1px solid rgba(23, 32, 51, 0.08);
+}
+
+.parameter-field small {
+  display: block;
+  margin-top: 0.25rem;
+}
