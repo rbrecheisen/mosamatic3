@@ -20,7 +20,7 @@ RUN dos2unix \
   /app/docker/entrypoint-worker.sh \
   /app/nginx/nginx.conf
 RUN chmod +x /app/docker/entrypoint-web.sh /app/docker/entrypoint-worker.sh
-RUN mkdir -p /data/uploads /data/staticfiles
+RUN mkdir -p /data/uploads /staticfiles
 
 EXPOSE 8000
 

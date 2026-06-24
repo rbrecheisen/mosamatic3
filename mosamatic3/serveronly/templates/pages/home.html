@@ -3,6 +3,6 @@
 <section class="card">
   <p class="eyebrow">Welcome</p>
   <h2>Hello{% if request.user.username %}, {{ request.user.username }}{% endif %}.</h2>
-  <p class="muted">You are logged in. From here you can upload <a href="{% url 'data' %}">data</a> or start an <a href="{% url 'analysis' %}">analysis</a>.</p>
+  <p class="muted">You are logged in. From here you can upload <a href="{% url 'data' %}">data</a>, start <a href="{% url 'tasks' %}">tasks</a>, or run <a href="{% url 'pipelines' %}">pipelines</a>.</p>
 </section>
 {% endblock %}

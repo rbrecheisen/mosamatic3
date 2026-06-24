@@ -10,7 +10,7 @@ def data_page(request):
     return render(request, 'datasets/data.html', {
         'input_datasets': input_datasets, 
         'output_datasets': output_datasets,
-        'output_empty_message': 'No output results yet. Run an analysis task to generate output datasets.',
+        'output_empty_message': 'No output results yet. Run a task to generate output datasets.',
     })
 
 @login_required
