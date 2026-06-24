@@ -34,7 +34,14 @@
 </section>
 
 <section class="card">
-  <h3>Pipeline runs</h3>
+  <div class="section-title-row">
+    <h3>Pipeline runs</h3>
+    {% if pipeline_runs %}
+      <button id="delete-all-pipeline-runs" class="link-button danger-link">
+        (delete all)
+      </button>
+    {% endif %}
+  </div>
 
   <table class="data-table">
     <thead>
@@ -135,6 +142,32 @@ document.querySelectorAll(".delete-pipeline-button").forEach((button) => {
     showMessage("Pipeline run deleted.");
     setTimeout(() => window.location.reload(), 500);
   });
+});
+
+document.getElementById("delete-all-pipeline-runs")?.addEventListener("click", async () => {
+  const confirmed = window.confirm(
+    "Delete all pipeline runs? This removes the run history, but not the datasets/files that were created."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const response = await fetch("/api/pipelines/delete-all", {
+    method: "DELETE",
+    headers: {
+      "X-CSRFToken": window.csrfToken,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    showMessage("Failed to delete pipeline runs: " + text, true);
+    return;
+  }
+
+  showMessage("Pipeline runs deleted.");
+  setTimeout(() => window.location.reload(), 500);
 });
 
 const hasRunningPipeline = Array.from(document.querySelectorAll(".pipeline-status"))

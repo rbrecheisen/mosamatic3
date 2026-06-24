@@ -191,6 +191,24 @@ def delete_pipeline_run(pipeline_run_id, user) -> None:
     pipeline_run.delete()
 
 
+def delete_all_pipeline_runs(user) -> int:
+    active_runs = PipelineRun.objects.filter(
+        owner=user,
+        status__in=[
+            PipelineRun.STATUS_PENDING,
+            PipelineRun.STATUS_RUNNING,
+        ],
+    )
+
+    if active_runs.exists():
+        raise ValidationError(
+            "Cannot delete all pipeline runs while one or more runs are pending or running. Cancel them first."
+        )
+
+    deleted_count, _ = PipelineRun.objects.filter(owner=user).delete()
+    return deleted_count
+
+
 def get_pipeline_status(pipeline_run_id, user) -> dict:
     pipeline_run = get_pipeline_run_or_404(pipeline_run_id, user)
 

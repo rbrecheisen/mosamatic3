@@ -8,6 +8,7 @@ from .service import (
     get_available_pipelines,
     get_pipeline_status,
     delete_pipeline_run,
+    delete_all_pipeline_runs,
 )
 
 
@@ -62,6 +63,19 @@ def pipeline_delete(request, pipeline_run_id):
         {
             "pipeline_run_id": str(pipeline_run_id),
             "message": "Pipeline run deleted",
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["DELETE"])
+def pipeline_delete_all(request):
+    deleted_count = delete_all_pipeline_runs(request.user)
+
+    return Response(
+        {
+            "message": "Pipeline runs deleted",
+            "deleted_count": deleted_count,
         },
         status=status.HTTP_200_OK,
     )
