@@ -42,6 +42,7 @@ urlpatterns = [
     path("api/pipelines/run", pipeline_api_views.pipeline_run),
     path("api/pipelines/<uuid:pipeline_run_id>", pipeline_api_views.pipeline_status),
     path("api/pipelines/<uuid:pipeline_run_id>/cancel", pipeline_api_views.pipeline_cancel),
+    path("api/pipelines/<uuid:pipeline_run_id>/delete", pipeline_api_views.pipeline_delete),
 
     path("api/admin/summary", admin_api_views.admin_summary),
     path("api/admin/users", admin_api_views.admin_users),

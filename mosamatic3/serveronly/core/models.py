@@ -168,19 +168,19 @@ class PipelineStepRun(models.Model):
     celery_task_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
 
     input_dataset = models.ForeignKey(
-        "Dataset",
-        on_delete=models.PROTECT,
+        Dataset,
+        on_delete=models.SET_NULL,
         related_name="pipeline_step_inputs",
-        blank=True,
         null=True,
+        blank=True,
     )
 
     output_dataset = models.ForeignKey(
-        "Dataset",
-        on_delete=models.PROTECT,
+        Dataset,
+        on_delete=models.SET_NULL,
         related_name="pipeline_step_outputs",
-        blank=True,
         null=True,
+        blank=True,
     )
 
     parameters = models.JSONField(default=dict)

@@ -18,7 +18,7 @@
       "input_dataset": "$steps.rescale.output_dataset",
       "parameters": {
         "model_files_dataset_id": null,
-        "model_version": "1",
+        "model_version": "1.0",
         "input_path_prefix": "",
         "probabilities": false
       }

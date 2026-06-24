@@ -59,7 +59,9 @@
                 Cancel
               </button>
             {% else %}
-              -
+              <button type="button" class="delete-pipeline-button warning" data-id="{{ run.id }}">
+                Delete
+              </button>
             {% endif %}
           </td>
         </tr>
@@ -102,6 +104,36 @@ document.querySelectorAll(".cancel-pipeline-button").forEach((button) => {
 
     showMessage("Cancel requested.");
     setTimeout(() => window.location.reload(), 1000);
+  });
+});
+
+document.querySelectorAll(".delete-pipeline-button").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const pipelineRunId = button.dataset.id;
+
+    const confirmed = window.confirm(
+      "Delete this pipeline run? This removes the run history, but not the datasets/files that were created."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await fetch(`/api/pipelines/${pipelineRunId}/delete`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": window.csrfToken,
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      showMessage("Failed to delete pipeline run: " + text, true);
+      return;
+    }
+
+    showMessage("Pipeline run deleted.");
+    setTimeout(() => window.location.reload(), 500);
   });
 });
 

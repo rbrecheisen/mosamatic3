@@ -7,6 +7,7 @@ from .service import (
     create_pipeline_run,
     get_available_pipelines,
     get_pipeline_status,
+    delete_pipeline_run,
 )
 
 
@@ -50,4 +51,17 @@ def pipeline_cancel(request, pipeline_run_id):
             "message": "Cancel requested",
         },
         status=status.HTTP_202_ACCEPTED,
+    )
+
+
+@api_view(["POST"])
+def pipeline_delete(request, pipeline_run_id):
+    delete_pipeline_run(pipeline_run_id, request.user)
+
+    return Response(
+        {
+            "pipeline_run_id": str(pipeline_run_id),
+            "message": "Pipeline run deleted",
+        },
+        status=status.HTTP_200_OK,
     )

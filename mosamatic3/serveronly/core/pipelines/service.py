@@ -179,6 +179,18 @@ def cancel_pipeline_run(pipeline_run_id, user) -> PipelineRun:
     return pipeline_run
 
 
+def delete_pipeline_run(pipeline_run_id, user) -> None:
+    pipeline_run = get_pipeline_run_or_404(pipeline_run_id, user)
+
+    if pipeline_run.status in [
+        PipelineRun.STATUS_PENDING,
+        PipelineRun.STATUS_RUNNING,
+    ]:
+        raise ValidationError("Cannot delete a pending or running pipeline run. Cancel it first.")
+
+    pipeline_run.delete()
+
+
 def get_pipeline_status(pipeline_run_id, user) -> dict:
     pipeline_run = get_pipeline_run_or_404(pipeline_run_id, user)
 
