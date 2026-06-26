@@ -12,6 +12,15 @@ export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
 
 cd "$SERVER_DIR"
 
+echo "Stopping existing Mosamatic Celery workers..."
+
+pkill -f "celery.*config.celery_app.*-Q tasks" || true
+pkill -f "celery.*config.celery_app.*-Q pipeline" || true
+pkill -f "celery.*config.celery_app.*tasks@%h" || true
+pkill -f "celery.*config.celery_app.*pipeline@%h" || true
+
+sleep 1
+
 ./run-dockerbackendservices.sh
 
 python manage.py makemigrations --noinput

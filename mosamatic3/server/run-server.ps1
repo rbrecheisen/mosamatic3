@@ -2,6 +2,23 @@ conda activate mosamatic3
 
 $env:PYTHONPATH = "D:\SoftwareDevelopment\GitHub\mosamatic3\mosamatic3\server;$env:PYTHONPATH"
 
+# Stop existing Celery workers before starting new ones
+Get-CimInstance Win32_Process |
+    Where-Object {
+        $_.CommandLine -like "*celery*" -and
+        $_.CommandLine -like "*config.celery_app*" -and
+        (
+            $_.CommandLine -like "*-Q pipeline*" -or
+            $_.CommandLine -like "*-Q tasks*" -or
+            $_.CommandLine -like "*pipeline@*" -or
+            $_.CommandLine -like "*tasks@*"
+        )
+    } |
+    ForEach-Object {
+        Write-Host "Stopping Celery process PID $($_.ProcessId): $($_.CommandLine)"
+        Stop-Process -Id $_.ProcessId -Force
+    }
+
 # Start Redis only, not the Docker worker
 & ".\run-dockerbackendservices.ps1"
 
