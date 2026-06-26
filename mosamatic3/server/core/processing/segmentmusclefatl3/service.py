@@ -2,6 +2,7 @@ import json
 import tempfile
 import zipfile
 import numpy as np
+import SimpleITK as sitk
 from io import BytesIO
 from pathlib import Path
 from celery.exceptions import Ignore
@@ -134,6 +135,73 @@ def numpy_to_output_file(relative_path: str, array: np.ndarray) -> OutputDataset
     return OutputDatasetFile(relative_path=relative_path, content=buffer.getvalue())
 
 
+# def numpy_to_nifti_to_output_file(relative_path: str, array: np.ndarray) -> OutputDatasetFile:
+#     data = np.asarray(array)
+
+#     # NIFTI viewers/tools are usually happier with a 3D volume,
+#     # so store a single L3 slice as z=1, y, x.
+#     if data.ndim == 2:
+#         data = data[np.newaxis, :, :]
+
+#     # Use compact/safe dtypes for NIFTI output.
+#     if data.dtype == np.bool_:
+#         data = data.astype(np.uint8)
+#     elif np.issubdtype(data.dtype, np.integer):
+#         if data.min() >= 0 and data.max() <= 255:
+#             data = data.astype(np.uint8)
+#         else:
+#             data = data.astype(np.int16)
+#     elif np.issubdtype(data.dtype, np.floating):
+#         data = data.astype(np.float32)
+
+#     image = sitk.GetImageFromArray(data)
+
+#     suffix = '.nii.gz' if relative_path.endswith('.nii.gz') else '.nii'
+
+#     with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+#         sitk.WriteImage(image, tmp.name)
+#         content = Path(tmp.name).read_bytes()
+
+#     return OutputDatasetFile(relative_path=relative_path, content=content)
+
+
+def numpy_to_nifti_to_output_file(relative_path: str, array: np.ndarray) -> OutputDatasetFile:
+    import SimpleITK as sitk
+
+    data = np.asarray(array)
+
+    # Store a single 2D L3 slice as a 3D NIFTI volume: z, y, x.
+    if data.ndim == 2:
+        data = data[np.newaxis, :, :]
+
+    if data.dtype == np.bool_:
+        data = data.astype(np.uint8)
+    elif np.issubdtype(data.dtype, np.integer):
+        if data.size == 0:
+            data = data.astype(np.uint8)
+        elif data.min() >= 0 and data.max() <= 255:
+            data = data.astype(np.uint8)
+        else:
+            data = data.astype(np.int16)
+    elif np.issubdtype(data.dtype, np.floating):
+        data = data.astype(np.float32)
+
+    image = sitk.GetImageFromArray(data)
+
+    # Optional but useful: neutral voxel spacing for a single-slice segmentation.
+    image.SetSpacing((1.0, 1.0, 1.0))
+
+    suffix = '.nii.gz' if relative_path.endswith('.nii.gz') else '.nii'
+
+    with tempfile.TemporaryDirectory(prefix='mosamatic3_nifti_') as temp_dir:
+        temp_path = Path(temp_dir) / f'segmentation{suffix}'
+
+        sitk.WriteImage(image, str(temp_path))
+        content = temp_path.read_bytes()
+
+    return OutputDatasetFile(relative_path=relative_path, content=content)
+
+
 def process_dicom_file(
     *,
     dicom_path: Path,
@@ -184,8 +252,11 @@ def process_dicom_file(
         segmentation = convert_labels_to_157(segmentation)
         segmentation_relative_path = f'{flat_name}.seg.npy'
 
+    nifti_relative_path = segmentation_relative_path.replace('.npy', '.nii.gz')
+
     output_files = [
-        numpy_to_output_file(segmentation_relative_path, segmentation)
+        numpy_to_output_file(segmentation_relative_path, segmentation),
+        numpy_to_nifti_to_output_file(nifti_relative_path, segmentation),
     ]
 
     output_files.append(

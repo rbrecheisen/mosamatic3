@@ -97,11 +97,10 @@ def collect_dicom_files(
 def collect_segmentation_files(
     dataset: Dataset,
     user_id: str,
-    file_type: Literal['npy', 'tag'],
+    file_type: Literal['npy', 'nifti', 'tag'],
     input_path_prefix: str | None,
 ) -> dict[str, object]:
     prefix = normalize_path_prefix(input_path_prefix)
-    suffix = '.tag' if file_type == 'tag' else '.seg.npy'
     result = {}
 
     for dataset_file in dataset.files.all():
@@ -112,13 +111,26 @@ def collect_segmentation_files(
 
         name = Path(relative_path).name
 
-        if not name.endswith(suffix):
-            continue
-
         if file_type == 'npy':
+            if not name.endswith('.seg.npy'):
+                continue
             key = name.removesuffix('.seg.npy')
-        else:
+
+        elif file_type == 'nifti':
+            if name.endswith('.seg.nii.gz'):
+                key = name.removesuffix('.seg.nii.gz')
+            elif name.endswith('.seg.nii'):
+                key = name.removesuffix('.seg.nii')
+            else:
+                continue
+
+        elif file_type == 'tag':
+            if not name.endswith('.tag'):
+                continue
             key = name.removesuffix('.tag').removesuffix('.dcm')
+
+        else:
+            raise RuntimeError(f'Unknown segmentation file type: {file_type}')
 
         result[key] = dataset_file
 
@@ -130,7 +142,7 @@ def collect_img_seg_pairs(
     image_dataset: Dataset,
     segmentation_dataset: Dataset,
     user_id: str,
-    file_type: Literal['npy', 'tag'],
+    file_type: Literal['npy', 'nifti', 'tag'],
     image_path_prefix: str | None,
     segmentation_path_prefix: str | None,
 ) -> list[tuple[object, object]]:
@@ -174,25 +186,48 @@ def collect_img_seg_pairs(
     return pairs
 
 
-def load_segmentation(path: Path, file_type: Literal['npy', 'tag']) -> np.ndarray | None:
+def validate_segmentation_labels(segmentation: np.ndarray, path: Path) -> np.ndarray:
+    if segmentation.ndim != 2:
+        raise RuntimeError(f'Segmentation must be 2D: {path.name}')
+
+    labels = set(np.unique(segmentation).astype(int).tolist())
+    allowed_labels = {0, MUSCLE, VAT, SAT}
+    unknown_labels = labels - allowed_labels
+
+    if unknown_labels:
+        raise RuntimeError(
+            f'Segmentation {path.name} contains unknown labels: {sorted(unknown_labels)}'
+        )
+
+    return segmentation
+
+
+def load_segmentation(path: Path, file_type: Literal['npy', 'nifti', 'tag']) -> np.ndarray | None:
     if file_type == 'npy':
         segmentation = np.load(path)
-        if segmentation.ndim != 2:
-            raise RuntimeError(f'Segmentation must be 2D: {path.name}')
-        labels = set(np.unique(segmentation).astype(int).tolist())
-        allowed_labels = {0, MUSCLE, VAT, SAT}
-        unknown_labels = labels - allowed_labels
-        if unknown_labels:
-            raise RuntimeError(
-                f'Segmentation {path.name} contains unknown labels: {sorted(unknown_labels)}'
-            )
-        return segmentation
+        return validate_segmentation_labels(segmentation, path)
+
+    if file_type == 'nifti':
+        import SimpleITK as sitk
+
+        image = sitk.ReadImage(str(path))
+        segmentation = sitk.GetArrayFromImage(image)
+
+        # SimpleITK returns arrays as z, y, x.
+        # Your segment task writes 2D masks as a single-slice 3D volume: 1, y, x.
+        if segmentation.ndim == 3 and segmentation.shape[0] == 1:
+            segmentation = segmentation[0]
+
+        segmentation = segmentation.astype(np.int16)
+        return validate_segmentation_labels(segmentation, path)
+
     if file_type == 'tag':
         pixels = get_pixels_from_tag_file(path)
         try:
             return pixels.reshape(512, 512)
         except Exception:
             return None
+
     raise RuntimeError(f'Unknown segmentation file type: {file_type}')
 
 
