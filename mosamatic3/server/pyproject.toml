@@ -1,12 +1,27 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "mosamatic3"
+name = "mosamatic3-django"
 version = "0.1.0"
-description = "Web-based tool for body composition analysis and clinical decision support"
+description = "Django REST + server-rendered HTML migration of Mosamatic3"
 requires-python = ">=3.11,<3.12"
 dependencies = [
 
-  # Packages Mosamatic BC analysis
-  "click",
+  # Django-specific packages
+  "django>=5.1,<5.3",
+  "djangorestframework>=3.15.0",
+  "celery[redis]>=5.4.0",
+  "pydantic>=2.8.0",
+  "pydantic-settings>=2.6.0",
+  "passlib[bcrypt]>=1.7.4",
+  "bcrypt==4.0.1",
+  "PyJWT>=2.9.0",
+  "python-dotenv>=1.0.1",
+  "gunicorn>=23.0.0",
+
+  # Imaging-related packages
   "pydicom>=3.0.1",
   "dicom2nifti>=2.6.2",
   "numpy>=1.26.4",
@@ -29,24 +44,22 @@ dependencies = [
   "tensorflow-io-gcs-filesystem>=0.31.0; platform_system == 'Darwin' and platform_machine == 'arm64'",
   "totalsegmentator>=2.11.0",
   "simpleitk>=2.5.2", 
-  "matplotlib",
+  "matplotlib>=3.10.0",
+  "docker>=7.1.0",
 
-  # Packages FastAPI
-  "fastapi[standard]>=0.115.0",
-  "sqlmodel>=0.0.22",
-  "passlib[bcrypt]>=1.7.4",
-  "bcrypt==4.0.1",
-  "python-jose[cryptography]>=3.3.0",
-  "pydantic-settings>=2.6.0",
-  "celery[redis]>=5.4.0",
-
-  # Packages testing
+  # Testing
   "pytest>=8.0.0",
+  "pytest-django>=4.12.0",
 ]
 
 [tool.uv]
 package = false
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+
 [tool.setuptools.packages.find]
-include = ["app*"]
-exclude = ["data*"]
+where = ["."]
+include = ["config*", "core*", "data*"]
+exclude = ["static*", "templates*", "media*", "uploads*", "tests*"]

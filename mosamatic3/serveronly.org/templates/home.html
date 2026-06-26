@@ -1,8 +1,0 @@
-{% extends 'base.html' %}
-{% block content %}
-<section class="card">
-  <p class="eyebrow">Welcome</p>
-  <h2>Hello{% if request.user.username %}, {{ request.user.username }}{% endif %}.</h2>
-  <p class="muted">You are logged in. From here you can upload <a href="{% url 'data' %}">data</a> or start an <a href="{% url 'analysis' %}">analysis</a>.</p>
-</section>
-{% endblock %}

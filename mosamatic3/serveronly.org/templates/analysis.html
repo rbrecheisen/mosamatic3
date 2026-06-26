@@ -1,9 +1,0 @@
-{% extends 'base.html' %}
-{% block content %}
-<section class="card">
-  <h2>Analysis tasks</h2>
-  <table class="data-table"><thead><tr><th>Name</th><th>Description</th><th>Actions</th></tr></thead><tbody>
-  {% for task in tasks %}<tr><td>{{ task.name }}</td><td>{{ task.description }}</td><td><a class="button-like" href="{% url 'task_parameters' task.key %}">Set parameters</a></td></tr>{% endfor %}
-  </tbody></table>
-</section>
-{% endblock %}
