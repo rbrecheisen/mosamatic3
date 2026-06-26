@@ -6,7 +6,7 @@ source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate mosamatic3
 
 PROJECT_ROOT="$HOME/Documents/Development/GitHub/mosamatic3"
-SERVER_DIR="$PROJECT_ROOT/mosamatic3/serveronly"
+SERVER_DIR="$PROJECT_ROOT/mosamatic3/server"
 
 export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
 

@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-root="$HOME/Documents/Development/GitHub/mosamatic3/mosamatic3/serveronly"
+root="$HOME/Documents/Development/GitHub/mosamatic3/mosamatic3/server"
 zipFilePath="$root/archive.zip"
 
 itemsToInclude=(
