@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 root="$HOME/Documents/Development/GitHub/mosamatic3/mosamatic3/server"
-zipFilePath="$root/archive.zip"
+zipFilePath="$root/sources.zip"
 
 itemsToInclude=(
   "config"

@@ -1,5 +1,5 @@
 $root = "D:\SoftwareDevelopment\GitHub\mosamatic3\mosamatic3\server"
-$zipFilePath = "D:\SoftwareDevelopment\GitHub\mosamatic3\mosamatic3\server\archive.zip"
+$zipFilePath = "D:\SoftwareDevelopment\GitHub\mosamatic3\mosamatic3\server\sources.zip"
 
 $itemsToInclude = @(
   "config",
