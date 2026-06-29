@@ -11,10 +11,10 @@ echo "Removing local images..."
 docker rmi brecheisen/mosamatic3:latest || true
 docker rmi nginx:1.27-alpine || true
 docker rmi redis:7-alpine || true
-docker rmi serveronly-pipeline-worker:latest || true
-docker rmi serveronly-task-worker:latest || true
-docker rmi serveronly-web:latest || true
-docker rmi serveronly-worker:latest || true
+docker rmi server-pipeline-worker:latest || true
+docker rmi server-task-worker:latest || true
+docker rmi server-web:latest || true
+docker rmi server-worker:latest || true
 
 echo "Pulling latest image..."
 docker pull "$imageName"
