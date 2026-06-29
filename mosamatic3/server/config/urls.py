@@ -10,6 +10,7 @@ urlpatterns = [
     path("", include("core.datasets.urls")),
     path("", include("core.tasking.urls")),
     path("", include("core.pipelines.urls")),
+    path("", include("core.manualeditor.urls")),
     path("", include("core.adminpanel.urls")),
 
     path("api/health", health),
@@ -19,6 +20,7 @@ urlpatterns = [
     path("api/forms/", include("core.forms.apiurls")),
     path("api/tasks/", include("core.tasking.apiurls")),
     path("api/pipelines/", include("core.pipelines.apiurls")),
+    path("api/manual-editor/", include("core.manualeditor.apiurls")),
     path("api/admin/", include("core.adminpanel.apiurls")),
 
     path("admin/", admin.site.urls),

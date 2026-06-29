@@ -33,6 +33,7 @@
         <a class="main-tab {% if request.resolver_match.url_name == 'data' or request.resolver_match.url_name == 'dataset_detail' %}main-tab-active{% endif %}" href="{% url 'data' %}">Data</a>
         <a class="main-tab {% if request.resolver_match.url_name == 'tasks' or request.resolver_match.url_name == 'task_parameters' %}main-tab-active{% endif %}" href="{% url 'tasks' %}">Tasks</a>
         <a class="main-tab {% if request.resolver_match.url_name == 'pipelines' %}main-tab-active{% endif %}" href="{% url 'pipelines' %}">Pipelines</a>
+        <a class="main-tab {% if request.resolver_match.url_name == 'manual_editor' %}main-tab-active{% endif %}" href="{% url 'manual_editor' %}">Manual Editor</a>
         {% if request.user.is_staff %}
           <a class="main-tab {% if request.resolver_match.url_name == 'admin_panel' %}main-tab-active{% endif %}" href="{% url 'admin_panel' %}">Admin</a>
         {% endif %}

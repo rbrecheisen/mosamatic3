@@ -402,3 +402,74 @@ body {
   display: block;
   margin-top: 0.25rem;
 }
+
+.manual-editor-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.manual-editor-sidebar {
+  display: grid;
+  gap: 1rem;
+}
+
+.manual-editor-sidebar label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.manual-editor-sidebar select,
+.manual-editor-sidebar input {
+  width: 100%;
+}
+
+.manual-editor-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.manual-editor-toolbar button {
+  cursor: pointer;
+}
+
+.manual-editor-viewer {
+  min-height: 640px;
+  background: #05070d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.manual-editor-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.manual-editor-brush-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .manual-editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-editor-viewer {
+    min-height: 420px;
+  }
+}
+
+.manual-editor-toolbar button.selected {
+  outline: 2px solid currentColor;
+  font-weight: 700;
+}

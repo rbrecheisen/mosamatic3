@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="card">
+  <h2>Manual Editor</h2>
+  <p class="muted">
+    Review and correct automatic muscle/fat segmentations.
+  </p>
+
+  <div class="manual-editor-layout">
+    <aside class="manual-editor-sidebar">
+      <label>
+        Dataset
+        <select id="manual-editor-dataset-select">
+          <option value="">Loading datasets...</option>
+        </select>
+      </label>
+
+      <label>
+        Correction output dataset
+        <select id="manual-editor-output-dataset-select">
+          <option value="">Select a source dataset first</option>
+        </select>
+      </label>
+
+      <label>
+        Case
+        <select id="manual-editor-case-select">
+          <option value="">Select a dataset first</option>
+        </select>
+      </label>
+
+      <div class="manual-editor-toolbar">
+        <button type="button" data-label="1">Muscle (1)</button>
+        <button type="button" data-label="5">VAT (5)</button>
+        <button type="button" data-label="7">SAT (7)</button>
+        <button type="button" data-label="0">Eraser (0)</button>
+        <button id="manual-editor-zoom" type="button">Zoom (Z)</button>
+        <button id="manual-editor-reset-zoom" type="button">Reset Zoom (R)</button>
+        <button id="manual-editor-undo" type="button" disabled>Undo</button>
+      </div>
+
+      <label>
+        Brush size
+        <input id="manual-editor-brush-size" type="range" min="1" max="50" value="10">
+      </label>
+
+      <label>
+        Mask opacity
+        <input id="manual-editor-opacity" type="range" min="0" max="100" value="50">
+      </label>
+
+      <button id="manual-editor-save" type="button" class="button-like">
+        Save correction
+      </button>
+
+      <p id="manual-editor-status" class="muted"></p>
+    </aside>
+
+    <main>
+      <div id="manual-editor-viewer" class="manual-editor-viewer"></div>
+    </main>
+  </div>
+</section>
+
+<script type="module" src="{% static 'manualeditor/manual-editor.js' %}"></script>
+{% endblock %}
