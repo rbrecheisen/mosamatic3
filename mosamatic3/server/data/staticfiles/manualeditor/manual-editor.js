@@ -40,37 +40,61 @@ function setStatus(message) {
   statusEl.textContent = message || '';
 }
 
-function selectLabel(label) {
-  currentLabel = label;
+function clearToolbarSelections() {
+  document.querySelectorAll('.manual-editor-toolbar button').forEach((button) => {
+    button.classList.remove('selected');
+  });
+}
 
-  const button = document.querySelector(`.manual-editor-toolbar button[data-label="${label}"]`);
+function selectToolbarButton(button) {
+  clearToolbarSelections();
 
   if (button) {
-    document.querySelectorAll('.manual-editor-toolbar button[data-label]').forEach((item) => {
-      item.classList.remove('selected');
-    });
-
     button.classList.add('selected');
+  }
+}
+
+function selectLabel(label) {
+  currentLabel = label;
+  setZoomMode(false, { keepToolbarSelection: true });
+
+  const button = document.querySelector(`.manual-editor-toolbar button[data-label="${label}"]`);
+  selectToolbarButton(button);
+
+  if (button) {
     setStatus(`Current label: ${button.textContent}`);
   }
 }
 
-function setZoomMode(enabled) {
+function setZoomMode(enabled, options = {}) {
   isZoomMode = enabled;
   isZooming = false;
   zoomStartPoint = null;
   zoomCurrentPoint = null;
 
-  if (zoomButton) {
-    zoomButton.classList.toggle('selected', isZoomMode);
-  }
-
   clearBrushPreview();
+
+  if (!options.keepToolbarSelection) {
+    if (isZoomMode) {
+      selectToolbarButton(zoomButton);
+    } else {
+      const labelButton = document.querySelector(
+        `.manual-editor-toolbar button[data-label="${currentLabel}"]`,
+      );
+      selectToolbarButton(labelButton);
+    }
+  }
 
   if (isZoomMode) {
     setStatus('Zoom mode: drag a rectangle on the image.');
   } else {
-    setStatus(`Current label: ${currentLabel}`);
+    const labelButton = document.querySelector(
+      `.manual-editor-toolbar button[data-label="${currentLabel}"]`,
+    );
+
+    if (labelButton) {
+      setStatus(`Current label: ${labelButton.textContent}`);
+    }
   }
 }
 
@@ -89,6 +113,19 @@ function resetViewport() {
 
   renderCanvas();
   clearBrushPreview();
+
+  selectToolbarButton(resetZoomButton);
+  setTimeout(() => {
+    if (isZoomMode) {
+      selectToolbarButton(zoomButton);
+    } else {
+      const labelButton = document.querySelector(
+        `.manual-editor-toolbar button[data-label="${currentLabel}"]`,
+      );
+      selectToolbarButton(labelButton);
+    }
+  }, 250);
+
   setStatus('Zoom reset.');
 }
 

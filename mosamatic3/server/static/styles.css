@@ -470,6 +470,9 @@ body {
 }
 
 .manual-editor-toolbar button.selected {
-  outline: 2px solid currentColor;
+  background: #f97316;
+  border-color: #f97316;
+  color: #fff;
   font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.25);
 }
