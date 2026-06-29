@@ -13,7 +13,10 @@
   <p id="upload-message" class="message" style="display:none"></p>
 </section>
 <section class="card">
-  <h3>Input datasets</h3>
+  <div class="section-title-row">
+    <h3>Input datasets</h3>{% if input_datasets %}<button id="delete-input" class="link-button danger-link">(delete
+      all)</button>{% endif %}
+  </div>
   {% include 'partials/dataset_table.html' with datasets=input_datasets empty='No input datasets uploaded yet.' %}
 </section>
 <section class="card">
@@ -50,17 +53,25 @@
     }
 
     msg.textContent = `Uploading ${selectedFiles.length} file(s)...`;
-    const response = await fetch('/api/datasets', { method: 'POST', headers: { 'X-CSRFToken': window.csrfToken }, body: formData });
+    const response = await fetch('/api/datasets/', { method: 'POST', headers: { 'X-CSRFToken': window.csrfToken }, body: formData });
     if (response.ok) location.reload(); else msg.textContent = await response.text();
   });
-  document.getElementById('delete-output')?.addEventListener('click', async () => {
-    if (!confirm('Delete all output result datasets? Input datasets will be kept.')) return;
-    const response = await fetch('/api/datasets/output-results', { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+
+  document.getElementById('delete-input')?.addEventListener('click', async () => {
+    if (!confirm('Delete all input datasets? Output result datasets will be kept.')) return;
+    const response = await fetch('/api/datasets/input-datasets/', { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
     if (response.ok) location.reload(); else alert(await response.text());
   });
+  
+  document.getElementById('delete-output')?.addEventListener('click', async () => {
+    if (!confirm('Delete all output result datasets? Input datasets will be kept.')) return;
+    const response = await fetch('/api/datasets/output-results/', { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+    if (response.ok) location.reload(); else alert(await response.text());
+  });
+
   async function deleteDataset(id, name) {
     if (!confirm(`Delete dataset "${name}"?`)) return;
-    const response = await fetch(`/api/datasets/${id}`, { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+    const response = await fetch(`/api/datasets/${id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
     if (response.ok) location.reload(); else alert(await response.text());
   }
 </script>

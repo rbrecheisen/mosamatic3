@@ -195,7 +195,7 @@ function collectOverrides() {
 document.getElementById("pipeline-form").addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const response = await fetch("/api/pipelines/run", {
+  const response = await fetch("/api/pipelines/run/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

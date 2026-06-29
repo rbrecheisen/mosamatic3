@@ -449,14 +449,40 @@ body {
   width: 100%;
   height: auto;
   image-rendering: pixelated;
+  cursor: none;
+}
+
+.manual-editor-brush-cursor {
+  position: absolute;
+  pointer-events: none;
+  display: none;
+  /* border: 1px dashed #ff9500; */
+  border: 1px dashed #ffffff;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.manual-editor-brush-cursor::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  /* background: #ff9500; */
+  background: #ffffff;
+  transform: translate(-50%, -50%);
 }
 
 .manual-editor-brush-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   pointer-events: none;
   width: 100%;
-  height: 100%;
+  height: auto;
 }
 
 @media (max-width: 900px) {

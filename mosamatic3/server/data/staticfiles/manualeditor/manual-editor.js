@@ -40,6 +40,34 @@ function setStatus(message) {
   statusEl.textContent = message || '';
 }
 
+function getBrushSizeInput() {
+  return document.getElementById('manual-editor-brush-size');
+}
+
+function setBrushSize(value) {
+  const brushSizeInput = getBrushSizeInput();
+
+  const min = Number(brushSizeInput.min || 1);
+  const max = Number(brushSizeInput.max || 50);
+
+  const nextValue = Math.max(min, Math.min(max, Math.round(value)));
+
+  brushSizeInput.value = String(nextValue);
+
+  if (lastBrushPreviewPoint) {
+    drawBrushPreview(lastBrushPreviewPoint);
+  }
+
+  setStatus(`Brush size: ${nextValue}`);
+}
+
+function changeBrushSize(delta) {
+  const brushSizeInput = getBrushSizeInput();
+  const currentValue = Number(brushSizeInput.value || 10);
+
+  setBrushSize(currentValue + delta);
+}
+
 function clearToolbarSelections() {
   document.querySelectorAll('.manual-editor-toolbar button').forEach((button) => {
     button.classList.remove('selected');
@@ -243,7 +271,7 @@ async function fetchJson(url, options = {}) {
 async function loadDatasets() {
   setStatus('Loading datasets...');
 
-  datasets = await fetchJson('/api/manual-editor/datasets');
+  datasets = await fetchJson('/api/manual-editor/datasets/');
 
   datasetSelect.innerHTML = '';
 
@@ -269,7 +297,7 @@ async function loadOutputDatasets(sourceDatasetId) {
   outputDatasetSelect.innerHTML = '<option value="">Loading correction datasets...</option>';
 
   outputDatasets = await fetchJson(
-    `/api/manual-editor/datasets/${sourceDatasetId}/correction-datasets`,
+    `/api/manual-editor/datasets/${sourceDatasetId}/correction-datasets/`,
   );
 
   outputDatasetSelect.innerHTML = '';
@@ -297,7 +325,7 @@ async function loadCases(datasetId) {
     ? `?output_dataset_id=${encodeURIComponent(outputDatasetId)}`
     : '';
 
-  cases = await fetchJson(`/api/manual-editor/datasets/${datasetId}/cases${query}`);
+  cases = await fetchJson(`/api/manual-editor/datasets/${datasetId}/cases/${query}`);
 
   caseSelect.innerHTML = '';
 
@@ -345,6 +373,7 @@ function ensureCanvas() {
   canvas.addEventListener('pointercancel', handlePointerUp);
   canvas.addEventListener('pointerleave', handlePointerLeave);
   canvas.addEventListener('pointerenter', handlePointerEnter);
+  canvas.addEventListener('wheel', handleWheel, { passive: false });
 
   viewer.appendChild(canvas);
   viewer.appendChild(brushOverlayCanvas);
@@ -568,6 +597,24 @@ function updateBrushPreview(event) {
   drawBrushPreview(lastBrushPreviewPoint);
 }
 
+function handleWheel(event) {
+  if (!currentMask || isZoomMode) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const direction = event.deltaY < 0 ? 1 : -1;
+
+  const step = event.shiftKey ? 5 : 1;
+
+  changeBrushSize(direction * step);
+
+  const canvasPoint = getCanvasPoint(event);
+  lastBrushPreviewPoint = clampImagePoint(canvasPointToImagePoint(canvasPoint));
+  drawBrushPreview(lastBrushPreviewPoint);
+}
+
 function handlePointerEnter(event) {
   updateBrushPreview(event);
 }
@@ -737,13 +784,13 @@ async function loadCase(imageFileId) {
 
   setStatus('Loading image and mask...');
 
-  const imagePayload = await fetchJson(`/api/manual-editor/files/${currentCase.image_file_id}/image`);
+  const imagePayload = await fetchJson(`/api/manual-editor/files/${currentCase.image_file_id}/image/`);
 
   const segmentationFileId =
     currentCase.correction_segmentation_file_id || currentCase.segmentation_file_id;
 
   const segmentationPayload = await fetchJson(
-    `/api/manual-editor/files/${segmentationFileId}/segmentation`,
+    `/api/manual-editor/files/${segmentationFileId}/segmentation/`,
   );
 
   currentRows = imagePayload.rows;
@@ -784,7 +831,7 @@ async function saveCorrection() {
   };
 
   const result = await fetchJson(
-    `/api/manual-editor/files/${currentCase.image_file_id}/save-correction`,
+    `/api/manual-editor/files/${currentCase.image_file_id}/save-correction/`,
     {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -892,10 +939,8 @@ saveButton.addEventListener('click', async () => {
   }
 });
 
-document.getElementById('manual-editor-brush-size').addEventListener('input', () => {
-  if (lastBrushPreviewPoint) {
-    drawBrushPreview(lastBrushPreviewPoint);
-  }
+getBrushSizeInput().addEventListener('input', () => {
+  setBrushSize(Number(getBrushSizeInput().value || 10));
 });
 
 document.addEventListener('keydown', (event) => {

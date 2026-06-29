@@ -118,8 +118,10 @@ class PipelineRun(models.Model):
 
     initial_dataset = models.ForeignKey(
         "Dataset",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name="pipeline_runs_as_initial_input",
+        null=True,
+        blank=True,
     )
 
     status = models.CharField(

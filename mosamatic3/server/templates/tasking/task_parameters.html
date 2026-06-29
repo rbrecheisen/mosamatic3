@@ -16,7 +16,6 @@
 const taskKey = '{{ task.key }}';
 const schema = JSON.parse(document.getElementById('schema-data').textContent);
 const saved = JSON.parse(document.getElementById('saved-data').textContent || '{}');
-// const datasets = [{% for d in datasets %}{id:'{{ d.id }}', name:'{{ d.name|escapejs }}'},{% endfor %}];
 const datasets = [
   {% for d in datasets %}
     {
@@ -87,18 +86,18 @@ document.getElementById('params-form').addEventListener('submit', async (event)=
       params[el.name] = el.value;
     }
   });
-  const response = await fetch(`/api/tasks/${taskKey}/parameters`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':window.csrfToken}, body:JSON.stringify({task_key:taskKey, parameters:params})});
+  const response = await fetch(`/api/tasks/${taskKey}/parameters/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':window.csrfToken}, body:JSON.stringify({task_key:taskKey, parameters:params})});
   if(response.ok){ show('Parameters saved.'); runButton.disabled=false; } else show(await response.text());
 });
 runButton.addEventListener('click', async ()=>{
-  const response = await fetch(`/api/tasks/${taskKey}/run`, {method:'POST', headers:{'X-CSRFToken':window.csrfToken}});
+  const response = await fetch(`/api/tasks/${taskKey}/run/`, {method:'POST', headers:{'X-CSRFToken':window.csrfToken}});
   if(!response.ok){ show(await response.text()); return; }
   const data = await response.json(); activeTaskId = data.task_id; runButton.style.display='none'; cancelButton.style.display='inline-flex'; pollStatus();
 });
-cancelButton.addEventListener('click', async ()=>{ if(!activeTaskId) return; await fetch(`/api/tasks/${activeTaskId}/cancel`, {method:'POST', headers:{'X-CSRFToken':window.csrfToken}}); show('Cancel requested.'); });
+cancelButton.addEventListener('click', async ()=>{ if(!activeTaskId) return; await fetch(`/api/tasks/${activeTaskId}/cancel/`, {method:'POST', headers:{'X-CSRFToken':window.csrfToken}}); show('Cancel requested.'); });
 async function pollStatus(){
   if(!activeTaskId) return;
-  const r = await fetch(`/api/tasks/${activeTaskId}`); const s = await r.json();
+  const r = await fetch(`/api/tasks/${activeTaskId}/`); const s = await r.json();
   show(`${s.state}: ${s.message || ''} ${s.current !== undefined ? `(${s.current}/${s.total})` : ''}`);
   if(['SUCCESS','FAILURE','REVOKED'].includes(s.state)){ runButton.style.display='inline-flex'; cancelButton.style.display='none'; return; }
   setTimeout(pollStatus, 1000);

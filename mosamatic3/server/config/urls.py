@@ -13,7 +13,7 @@ urlpatterns = [
     path("", include("core.manualeditor.urls")),
     path("", include("core.adminpanel.urls")),
 
-    path("api/health", health),
+    path("api/health/", health),
 
     path("api/auth/", include("core.accounts.apiurls")),
     path("api/datasets/", include("core.datasets.apiurls")),

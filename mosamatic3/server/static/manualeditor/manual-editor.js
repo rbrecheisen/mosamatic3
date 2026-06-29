@@ -22,6 +22,7 @@ let canvas = null;
 let ctx = null;
 let brushOverlayCanvas = null;
 let brushOverlayCtx = null;
+let brushCursorElement = null;
 let lastBrushPreviewPoint = null;
 let isPainting = false;
 let lastPaintPoint = null;
@@ -38,6 +39,34 @@ let zoomCurrentPoint = null;
 
 function setStatus(message) {
   statusEl.textContent = message || '';
+}
+
+function getBrushSizeInput() {
+  return document.getElementById('manual-editor-brush-size');
+}
+
+function setBrushSize(value) {
+  const brushSizeInput = getBrushSizeInput();
+
+  const min = Number(brushSizeInput.min || 1);
+  const max = Number(brushSizeInput.max || 50);
+
+  const nextValue = Math.max(min, Math.min(max, Math.round(value)));
+
+  brushSizeInput.value = String(nextValue);
+
+  if (lastBrushPreviewPoint) {
+    drawBrushPreview(lastBrushPreviewPoint);
+  }
+
+  setStatus(`Brush size: ${nextValue}`);
+}
+
+function changeBrushSize(delta) {
+  const brushSizeInput = getBrushSizeInput();
+  const currentValue = Number(brushSizeInput.value || 10);
+
+  setBrushSize(currentValue + delta);
 }
 
 function clearToolbarSelections() {
@@ -243,7 +272,7 @@ async function fetchJson(url, options = {}) {
 async function loadDatasets() {
   setStatus('Loading datasets...');
 
-  datasets = await fetchJson('/api/manual-editor/datasets');
+  datasets = await fetchJson('/api/manual-editor/datasets/');
 
   datasetSelect.innerHTML = '';
 
@@ -269,7 +298,7 @@ async function loadOutputDatasets(sourceDatasetId) {
   outputDatasetSelect.innerHTML = '<option value="">Loading correction datasets...</option>';
 
   outputDatasets = await fetchJson(
-    `/api/manual-editor/datasets/${sourceDatasetId}/correction-datasets`,
+    `/api/manual-editor/datasets/${sourceDatasetId}/correction-datasets/`,
   );
 
   outputDatasetSelect.innerHTML = '';
@@ -297,7 +326,7 @@ async function loadCases(datasetId) {
     ? `?output_dataset_id=${encodeURIComponent(outputDatasetId)}`
     : '';
 
-  cases = await fetchJson(`/api/manual-editor/datasets/${datasetId}/cases${query}`);
+  cases = await fetchJson(`/api/manual-editor/datasets/${datasetId}/cases/${query}`);
 
   caseSelect.innerHTML = '';
 
@@ -331,6 +360,7 @@ function ensureCanvas() {
   canvas.height = currentRows;
 
   ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
 
   brushOverlayCanvas = document.createElement('canvas');
   brushOverlayCanvas.className = 'manual-editor-brush-overlay';
@@ -338,6 +368,10 @@ function ensureCanvas() {
   brushOverlayCanvas.height = currentRows;
 
   brushOverlayCtx = brushOverlayCanvas.getContext('2d');
+  brushOverlayCtx.imageSmoothingEnabled = false;
+
+  brushCursorElement = document.createElement('div');
+  brushCursorElement.className = 'manual-editor-brush-cursor';
 
   canvas.addEventListener('pointerdown', handlePointerDown);
   canvas.addEventListener('pointermove', handlePointerMove);
@@ -345,9 +379,11 @@ function ensureCanvas() {
   canvas.addEventListener('pointercancel', handlePointerUp);
   canvas.addEventListener('pointerleave', handlePointerLeave);
   canvas.addEventListener('pointerenter', handlePointerEnter);
+  canvas.addEventListener('wheel', handleWheel, { passive: false });
 
   viewer.appendChild(canvas);
   viewer.appendChild(brushOverlayCanvas);
+  viewer.appendChild(brushCursorElement);
 }
 
 function renderCanvas() {
@@ -436,41 +472,62 @@ function getCanvasPoint(event) {
 }
 
 function clearBrushPreview() {
-  if (!brushOverlayCtx || !brushOverlayCanvas) {
-    return;
+  if (brushOverlayCtx && brushOverlayCanvas) {
+    brushOverlayCtx.clearRect(
+      0,
+      0,
+      brushOverlayCanvas.width,
+      brushOverlayCanvas.height,
+    );
   }
 
-  brushOverlayCtx.clearRect(
-    0,
-    0,
-    brushOverlayCanvas.width,
-    brushOverlayCanvas.height,
-  );
+  if (brushCursorElement) {
+    brushCursorElement.style.display = 'none';
+  }
 }
 
 function drawBrushPreview(imagePoint) {
-  if (!brushOverlayCtx || !brushOverlayCanvas || !imagePoint || isZoomMode) {
+  if (!brushCursorElement || !canvas || !imagePoint || isZoomMode) {
     return;
   }
 
-  clearBrushPreview();
+  if (brushOverlayCtx && brushOverlayCanvas) {
+    brushOverlayCtx.clearRect(
+      0,
+      0,
+      brushOverlayCanvas.width,
+      brushOverlayCanvas.height,
+    );
+  }
 
   const canvasPoint = imagePointToCanvasPoint(imagePoint);
 
+  const canvasRect = canvas.getBoundingClientRect();
+  const viewerRect = viewer.getBoundingClientRect();
+
+  const scaleX = canvasRect.width / currentColumns;
+  const scaleY = canvasRect.height / currentRows;
+
   const brushSize = Number(document.getElementById('manual-editor-brush-size').value);
   const radiusInImagePixels = Math.max(1, brushSize / 2);
+
   const zoomScaleX = currentColumns / viewport.width;
   const zoomScaleY = currentRows / viewport.height;
-  const radiusOnCanvas = radiusInImagePixels * ((zoomScaleX + zoomScaleY) / 2);
+  const radiusOnCanvasPixels = radiusInImagePixels * ((zoomScaleX + zoomScaleY) / 2);
 
-  brushOverlayCtx.save();
-  brushOverlayCtx.beginPath();
-  brushOverlayCtx.arc(canvasPoint.x, canvasPoint.y, radiusOnCanvas, 0, Math.PI * 2);
-  brushOverlayCtx.setLineDash([4, 4]);
-  brushOverlayCtx.lineWidth = 1.5;
-  brushOverlayCtx.strokeStyle = 'white';
-  brushOverlayCtx.stroke();
-  brushOverlayCtx.restore();
+  const diameterCssPixels = Math.max(
+    4,
+    Math.round(radiusOnCanvasPixels * 2 * ((scaleX + scaleY) / 2)),
+  );
+
+  const left = canvasRect.left - viewerRect.left + canvasPoint.x * scaleX;
+  const top = canvasRect.top - viewerRect.top + canvasPoint.y * scaleY;
+
+  brushCursorElement.style.display = 'block';
+  brushCursorElement.style.width = `${diameterCssPixels}px`;
+  brushCursorElement.style.height = `${diameterCssPixels}px`;
+  brushCursorElement.style.left = `${left}px`;
+  brushCursorElement.style.top = `${top}px`;
 }
 
 function drawZoomRectangle() {
@@ -568,6 +625,24 @@ function updateBrushPreview(event) {
   drawBrushPreview(lastBrushPreviewPoint);
 }
 
+function handleWheel(event) {
+  if (!currentMask || isZoomMode) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const direction = event.deltaY < 0 ? 1 : -1;
+
+  const step = event.shiftKey ? 5 : 1;
+
+  changeBrushSize(direction * step);
+
+  const canvasPoint = getCanvasPoint(event);
+  lastBrushPreviewPoint = clampImagePoint(canvasPointToImagePoint(canvasPoint));
+  drawBrushPreview(lastBrushPreviewPoint);
+}
+
 function handlePointerEnter(event) {
   updateBrushPreview(event);
 }
@@ -575,6 +650,7 @@ function handlePointerEnter(event) {
 function handlePointerLeave(event) {
   handlePointerUp(event);
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   clearBrushPreview();
 }
 
@@ -737,13 +813,13 @@ async function loadCase(imageFileId) {
 
   setStatus('Loading image and mask...');
 
-  const imagePayload = await fetchJson(`/api/manual-editor/files/${currentCase.image_file_id}/image`);
+  const imagePayload = await fetchJson(`/api/manual-editor/files/${currentCase.image_file_id}/image/`);
 
   const segmentationFileId =
     currentCase.correction_segmentation_file_id || currentCase.segmentation_file_id;
 
   const segmentationPayload = await fetchJson(
-    `/api/manual-editor/files/${segmentationFileId}/segmentation`,
+    `/api/manual-editor/files/${segmentationFileId}/segmentation/`,
   );
 
   currentRows = imagePayload.rows;
@@ -756,6 +832,7 @@ async function loadCase(imageFileId) {
   brushOverlayCanvas = null;
   brushOverlayCtx = null;
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   viewport = null;
   setZoomMode(false);
   resetUndoStack();
@@ -784,7 +861,7 @@ async function saveCorrection() {
   };
 
   const result = await fetchJson(
-    `/api/manual-editor/files/${currentCase.image_file_id}/save-correction`,
+    `/api/manual-editor/files/${currentCase.image_file_id}/save-correction/`,
     {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -819,6 +896,7 @@ datasetSelect.addEventListener('change', async () => {
   brushOverlayCanvas = null;
   brushOverlayCtx = null;
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   viewport = null;
   setZoomMode(false);
   resetUndoStack();
@@ -841,6 +919,7 @@ outputDatasetSelect.addEventListener('change', async () => {
   brushOverlayCanvas = null;
   brushOverlayCtx = null;
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   viewport = null;
   setZoomMode(false);
   resetUndoStack();
@@ -892,10 +971,8 @@ saveButton.addEventListener('click', async () => {
   }
 });
 
-document.getElementById('manual-editor-brush-size').addEventListener('input', () => {
-  if (lastBrushPreviewPoint) {
-    drawBrushPreview(lastBrushPreviewPoint);
-  }
+getBrushSizeInput().addEventListener('input', () => {
+  setBrushSize(Number(getBrushSizeInput().value || 10));
 });
 
 document.addEventListener('keydown', (event) => {

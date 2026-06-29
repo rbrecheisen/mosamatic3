@@ -12,7 +12,7 @@
       <p class="muted">Source task: {{ dataset.source_task_key|default:"-" }}</p>
       </p>
     </div>
-    <a class="button-like" href="/api/datasets/{{ dataset.id }}/download">Download ZIP</a>
+    <a class="button-like" href="/api/datasets/{{ dataset.id }}/download/">Download ZIP</a>
   </div>
   <a class="button-like secondary" href="{% url 'data' %}">Back to datasets</a>
 </section>

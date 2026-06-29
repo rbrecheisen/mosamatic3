@@ -6,7 +6,7 @@ from pathlib import Path, PurePosixPath
 from django.conf import settings
 from django.db import transaction
 from rest_framework.exceptions import ValidationError, NotFound
-from ..models import Dataset, DatasetFile
+from ..models import Dataset, DatasetFile, PipelineRun, PipelineStepRun
 
 @dataclass(frozen=True)
 class OutputDatasetFile:
@@ -103,10 +103,39 @@ def create_empty_output_dataset_for_user_id(
     return dataset
 
 def delete_dataset_and_files(dataset: Dataset) -> None:
+    active_statuses = [
+        PipelineRun.STATUS_PENDING,
+        PipelineRun.STATUS_RUNNING,
+    ]
+
+    if dataset.pipeline_runs_as_initial_input.filter(status__in=active_statuses).exists():
+        raise ValidationError(
+            "This dataset is currently used by a pending or running pipeline. "
+            "Cancel or wait for that pipeline before deleting the dataset."
+        )
+
+    if PipelineStepRun.objects.filter(
+        input_dataset=dataset,
+        pipeline_run__status__in=active_statuses,
+    ).exists():
+        raise ValidationError(
+            "This dataset is currently used as input by a pending or running pipeline step. "
+            "Cancel or wait for that pipeline before deleting the dataset."
+        )
+
+    if PipelineStepRun.objects.filter(
+        output_dataset=dataset,
+        pipeline_run__status__in=active_statuses,
+    ).exists():
+        raise ValidationError(
+            "This dataset is currently used as output by a pending or running pipeline step. "
+            "Cancel or wait for that pipeline before deleting the dataset."
+        )
+
     root = dataset_upload_root(dataset.owner_id, dataset.id)
     dataset.delete()
     shutil.rmtree(root, ignore_errors=True)
-
+    
 def make_unique_dataset_name(base_name: str, user) -> str:
     base = base_name.strip() or 'Output dataset'
     existing = set(Dataset.objects.filter(owner=user).values_list('name', flat=True))
