@@ -1,5 +1,12 @@
 from django.contrib import messages
-from django.contrib.auth import authenticate, login as django_login, logout as django_logout
+# from django.contrib.auth import authenticate, login as django_login, logout as django_logout
+from django.contrib.auth import (
+    authenticate,
+    login as django_login,
+    logout as django_logout,
+    update_session_auth_hash,
+)
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.shortcuts import redirect, render
 
@@ -35,3 +42,25 @@ def register_page(request):
             django_login(request, user)
             return redirect('home')
     return render(request, 'accounts/register.html')
+
+@login_required
+def change_password_page(request):
+    if request.method == 'POST':
+        current_password = request.POST.get('current_password') or ''
+        new_password = request.POST.get('new_password') or ''
+        confirm_password = request.POST.get('confirm_password') or ''
+
+        if not request.user.check_password(current_password):
+            messages.error(request, 'Current password is incorrect')
+        elif not new_password:
+            messages.error(request, 'New password is required')
+        elif new_password != confirm_password:
+            messages.error(request, 'New passwords do not match')
+        else:
+            request.user.set_password(new_password)
+            request.user.save()
+            update_session_auth_hash(request, request.user)
+            messages.success(request, 'Password changed successfully')
+            return redirect('home')
+
+    return render(request, 'accounts/change_password.html')

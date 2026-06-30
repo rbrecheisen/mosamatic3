@@ -21,7 +21,8 @@ services:
       UPLOAD_ROOT: /data/uploads
       STATIC_ROOT: /staticfiles
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      # ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      ADMIN_PASSWORD: admin
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       GUNICORN_WORKERS: "3"
@@ -29,7 +30,7 @@ services:
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
-      - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
+      # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     expose:
       - "8000"
     depends_on:
@@ -46,7 +47,8 @@ services:
       UPLOAD_ROOT: /data/uploads
       STATIC_ROOT: /staticfiles
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      # ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      ADMIN_PASSWORD: admin
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       CELERY_LOGLEVEL: info
@@ -56,7 +58,7 @@ services:
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
-      - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
+      # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     command: ["/app/docker/entrypoint-worker.sh"]
     depends_on:
       - redis
@@ -72,7 +74,8 @@ services:
       UPLOAD_ROOT: /data/uploads
       STATIC_ROOT: /staticfiles
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      # ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
+      ADMIN_PASSWORD: admin
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       CELERY_LOGLEVEL: info
@@ -82,7 +85,7 @@ services:
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
-      - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
+      # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     command: ["/app/docker/entrypoint-worker.sh"]
     depends_on:
       - redis
