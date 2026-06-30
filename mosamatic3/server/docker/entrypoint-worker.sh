@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+mkdir -p "${LOG_DIR:-/data/logs}"
+
 exec celery -A config.celery_app worker \
   --loglevel="${CELERY_LOGLEVEL:-info}" \
   --pool="${CELERY_POOL:-solo}" \

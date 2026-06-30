@@ -5,6 +5,18 @@
   <p>{{ users.count }} user(s), {{ datasets.count }} dataset(s).</p>
 </section>
 <section class="card">
+  <h3>Support bundle</h3>
+  <p>
+    Download a ZIP file with application logs and safe system information.
+    This file does not include uploaded datasets, output datasets, the database, passwords, or secrets.
+  </p>
+  <p>
+    <a class="button-like" href="{% url 'download_support_bundle' %}">
+      Download support bundle
+    </a>
+  </p>
+</section>
+<section class="card">
   <h3>Users</h3>
   <table class="data-table">
     <thead><tr><th>Email</th><th>Active</th><th>Admin</th></tr></thead>

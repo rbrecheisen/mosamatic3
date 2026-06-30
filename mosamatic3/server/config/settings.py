@@ -1,4 +1,6 @@
 import os
+import logging
+import logging.config
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -137,3 +139,86 @@ DATA_UPLOAD_MAX_NUMBER_FILES = int(os.getenv('DATA_UPLOAD_MAX_NUMBER_FILES', '10
 DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv('DATA_UPLOAD_MAX_NUMBER_FIELDS', '20000'))
 FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv('FILE_UPLOAD_MAX_MEMORY_SIZE', '2500000'))
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv('DATA_UPLOAD_MAX_MEMORY_SIZE', '25000000'))
+
+# ---------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------
+
+LOG_DIR = Path(os.getenv("LOG_DIR", "/data/logs"))
+if not LOG_DIR.is_absolute():
+    LOG_DIR = BASE_DIR / LOG_DIR
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", "10485760"))  # 10 MB
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "formatters": {
+        "verbose": {
+            "format": (
+                "%(asctime)s %(levelname)s "
+                "[%(process)d:%(threadName)s] "
+                "%(name)s: %(message)s"
+            )
+        },
+        "simple": {
+            "format": "%(asctime)s %(levelname)s %(name)s: %(message)s"
+        },
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "app_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(LOG_DIR / "mosamatic3.log"),
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+        },
+        "error_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(LOG_DIR / "mosamatic3-errors.log"),
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+            "level": "ERROR",
+        },
+    },
+
+    "root": {
+        "handlers": ["console", "app_file", "error_file"],
+        "level": LOG_LEVEL,
+    },
+
+    "loggers": {
+        "django": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "celery": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "core": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
