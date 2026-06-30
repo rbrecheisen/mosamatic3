@@ -37,5 +37,17 @@ admin_password.txt
 .DS_Store
 Thumbs.db
 
+# Docker/compose files not needed inside the image
+docker-compose*.yml
+compose*.yml
+.dockerignore
+
+# Local helper scripts not needed inside the image
+*.ps1
+*.sh
+*.bat
+*.cmd
+
 # Local generated archives
 _sources.zip
+*.zip
