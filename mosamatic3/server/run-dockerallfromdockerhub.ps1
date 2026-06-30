@@ -1,7 +1,7 @@
 $imageName = "brecheisen/mosamatic3:latest"
 
-Write-Host "Stopping existing containers..."
-docker compose down
+Write-Host "Stopping existing containers (and remove volumes)..."
+docker compose down -v
 
 Write-Host "Removing local images..."
 docker rmi brecheisen/mosamatic3:latest
