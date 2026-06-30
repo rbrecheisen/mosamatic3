@@ -21,14 +21,23 @@
           <td>{{ dataset.total_size_bytes }} bytes</td>
           <td>{{ dataset.created_at }}</td>
           <td>
-            {% if dataset.kind == 'output' %}
+            {% if dataset.is_system %}
+              Built-in
+            {% elif dataset.kind == 'output' %}
               {{ dataset.source_task_key|default:'Task output' }}
             {% else %}
               Uploaded
             {% endif %}
           </td>
-          <td><button type="button"
-              onclick="deleteDataset('{{ dataset.id }}','{{ dataset.name|escapejs }}')">delete</button></td>
+          <td>
+            {% if dataset.is_system %}
+              <span class="muted">system dataset</span>
+            {% else %}
+              <button type="button" onclick="deleteDataset('{{ dataset.id }}','{{ dataset.name|escapejs }}')">
+                delete
+              </button>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     </tbody>

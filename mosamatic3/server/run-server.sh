@@ -27,6 +27,7 @@ python manage.py makemigrations --noinput
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 python manage.py ensure_admin
+python manage.py ensure_systemdatasets
 
 cat > /tmp/start-mosamatic-celery-tasks.sh <<EOF
 #!/bin/zsh

@@ -40,8 +40,13 @@ def download_dataset(request, dataset_id):
 
 @api_view(['DELETE'])
 def delete_input_datasets(request):
-    for dataset in Dataset.objects.filter(owner=request.user, kind='input'):
+    for dataset in Dataset.objects.filter(
+        owner=request.user,
+        kind=Dataset.KIND_INPUT,
+        is_system=False,
+    ):
         delete_dataset_and_files(dataset)
+
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 @api_view(['DELETE'])

@@ -41,6 +41,11 @@ class Dataset(models.Model):
         db_index=True,
     )
     created_at = models.DateTimeField(default=timezone.now)
+    is_system = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text='System-managed dataset that should not be deleted by users.',
+    )
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['owner', 'name'], name='uq_dataset_owner_name')]

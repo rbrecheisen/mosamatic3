@@ -1,8 +1,8 @@
 import json
-
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.conf import settings
 
 from core.models import Dataset, PipelineRun
 from core.tasking.registry import TASKS
@@ -35,6 +35,13 @@ def pipeline_detail(request, config_key):
     except FileNotFoundError:
         messages.error(request, f"Unknown pipeline config: {config_key}")
         return redirect("pipelines")
+    
+    system_dataset = Dataset.objects.filter(
+        owner=request.user,
+        name=settings.BUILTIN_MODEL_FILES_DATASET_NAME,
+        is_system=True,
+        kind=Dataset.KIND_INPUT,
+    ).first()
 
     datasets = Dataset.objects.filter(
         owner=request.user,
@@ -43,9 +50,13 @@ def pipeline_detail(request, config_key):
     input_datasets = Dataset.objects.filter(
         owner=request.user,
         kind=Dataset.KIND_INPUT,
+        is_system=False,
     ).order_by("-created_at")
 
-    form_steps = build_pipeline_form_steps(config)
+    form_steps = build_pipeline_form_steps(
+        config,
+        system_dataset=system_dataset,
+    )
 
     return render(
         request,
@@ -60,7 +71,7 @@ def pipeline_detail(request, config_key):
     )
 
 
-def build_pipeline_form_steps(config: dict) -> list[dict]:
+def build_pipeline_form_steps(config: dict, system_dataset=None) -> list[dict]:
     """
     Build UI metadata from:
     - pipeline config step parameters
@@ -91,7 +102,17 @@ def build_pipeline_form_steps(config: dict) -> list[dict]:
 
             field_schema = dict(schema_properties.get(parameter_name, {}))
             field_schema["name"] = parameter_name
-            field_schema["value"] = configured_value
+
+            value = configured_value
+
+            if (
+                parameter_name == "model_files_dataset_id"
+                and value is None
+                and system_dataset is not None
+            ):
+                value = str(system_dataset.id)
+
+            field_schema["value"] = value
             field_schema["required"] = parameter_name in required_fields
 
             fields.append(field_schema)

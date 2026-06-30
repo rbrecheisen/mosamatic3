@@ -95,6 +95,20 @@ if not UPLOAD_ROOT.is_absolute():
     UPLOAD_ROOT = BASE_DIR / UPLOAD_ROOT
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
+BUILTIN_MODEL_FILES_DATASET_NAME = os.getenv(
+    'BUILTIN_MODEL_FILES_DATASET_NAME',
+    'AI model files'
+)
+BUILTIN_MODEL_FILES_DIR = Path(
+    os.getenv(
+        'BUILTIN_MODEL_FILES_DIR',
+        BASE_DIR / 'core' / 'systemdatasets' / 'modelfiles',
+    )
+)
+
+if not BUILTIN_MODEL_FILES_DIR.is_absolute():
+    BUILTIN_MODEL_FILES_DIR = BASE_DIR / BUILTIN_MODEL_FILES_DIR
+
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
 ADMIN_PASSWORD_FILE = Path(os.getenv('ADMIN_PASSWORD_FILE', BASE_DIR / 'data' / 'admin_password.txt'))
 if not ADMIN_PASSWORD_FILE.is_absolute():

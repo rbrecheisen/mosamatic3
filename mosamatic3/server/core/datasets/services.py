@@ -103,6 +103,9 @@ def create_empty_output_dataset_for_user_id(
     return dataset
 
 def delete_dataset_and_files(dataset: Dataset) -> None:
+    if dataset.is_system:
+        raise ValidationError("System datasets cannot be deleted.")
+
     active_statuses = [
         PipelineRun.STATUS_PENDING,
         PipelineRun.STATUS_RUNNING,

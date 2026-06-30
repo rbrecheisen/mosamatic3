@@ -26,6 +26,7 @@ python manage.py makemigrations --noinput
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput
 python manage.py ensure_admin
+python manage.py ensure_systemdatasets
 
 # Start Celery pipeline worker in a separate PowerShell window
 Start-Process powershell.exe -ArgumentList @(

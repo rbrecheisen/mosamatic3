@@ -22,6 +22,7 @@ let canvas = null;
 let ctx = null;
 let brushOverlayCanvas = null;
 let brushOverlayCtx = null;
+let brushCursorElement = null;
 let lastBrushPreviewPoint = null;
 let isPainting = false;
 let lastPaintPoint = null;
@@ -359,6 +360,7 @@ function ensureCanvas() {
   canvas.height = currentRows;
 
   ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
 
   brushOverlayCanvas = document.createElement('canvas');
   brushOverlayCanvas.className = 'manual-editor-brush-overlay';
@@ -366,6 +368,10 @@ function ensureCanvas() {
   brushOverlayCanvas.height = currentRows;
 
   brushOverlayCtx = brushOverlayCanvas.getContext('2d');
+  brushOverlayCtx.imageSmoothingEnabled = false;
+
+  brushCursorElement = document.createElement('div');
+  brushCursorElement.className = 'manual-editor-brush-cursor';
 
   canvas.addEventListener('pointerdown', handlePointerDown);
   canvas.addEventListener('pointermove', handlePointerMove);
@@ -377,6 +383,7 @@ function ensureCanvas() {
 
   viewer.appendChild(canvas);
   viewer.appendChild(brushOverlayCanvas);
+  viewer.appendChild(brushCursorElement);
 }
 
 function renderCanvas() {
@@ -465,41 +472,62 @@ function getCanvasPoint(event) {
 }
 
 function clearBrushPreview() {
-  if (!brushOverlayCtx || !brushOverlayCanvas) {
-    return;
+  if (brushOverlayCtx && brushOverlayCanvas) {
+    brushOverlayCtx.clearRect(
+      0,
+      0,
+      brushOverlayCanvas.width,
+      brushOverlayCanvas.height,
+    );
   }
 
-  brushOverlayCtx.clearRect(
-    0,
-    0,
-    brushOverlayCanvas.width,
-    brushOverlayCanvas.height,
-  );
+  if (brushCursorElement) {
+    brushCursorElement.style.display = 'none';
+  }
 }
 
 function drawBrushPreview(imagePoint) {
-  if (!brushOverlayCtx || !brushOverlayCanvas || !imagePoint || isZoomMode) {
+  if (!brushCursorElement || !canvas || !imagePoint || isZoomMode) {
     return;
   }
 
-  clearBrushPreview();
+  if (brushOverlayCtx && brushOverlayCanvas) {
+    brushOverlayCtx.clearRect(
+      0,
+      0,
+      brushOverlayCanvas.width,
+      brushOverlayCanvas.height,
+    );
+  }
 
   const canvasPoint = imagePointToCanvasPoint(imagePoint);
 
+  const canvasRect = canvas.getBoundingClientRect();
+  const viewerRect = viewer.getBoundingClientRect();
+
+  const scaleX = canvasRect.width / currentColumns;
+  const scaleY = canvasRect.height / currentRows;
+
   const brushSize = Number(document.getElementById('manual-editor-brush-size').value);
   const radiusInImagePixels = Math.max(1, brushSize / 2);
+
   const zoomScaleX = currentColumns / viewport.width;
   const zoomScaleY = currentRows / viewport.height;
-  const radiusOnCanvas = radiusInImagePixels * ((zoomScaleX + zoomScaleY) / 2);
+  const radiusOnCanvasPixels = radiusInImagePixels * ((zoomScaleX + zoomScaleY) / 2);
 
-  brushOverlayCtx.save();
-  brushOverlayCtx.beginPath();
-  brushOverlayCtx.arc(canvasPoint.x, canvasPoint.y, radiusOnCanvas, 0, Math.PI * 2);
-  brushOverlayCtx.setLineDash([4, 4]);
-  brushOverlayCtx.lineWidth = 1.5;
-  brushOverlayCtx.strokeStyle = 'white';
-  brushOverlayCtx.stroke();
-  brushOverlayCtx.restore();
+  const diameterCssPixels = Math.max(
+    4,
+    Math.round(radiusOnCanvasPixels * 2 * ((scaleX + scaleY) / 2)),
+  );
+
+  const left = canvasRect.left - viewerRect.left + canvasPoint.x * scaleX;
+  const top = canvasRect.top - viewerRect.top + canvasPoint.y * scaleY;
+
+  brushCursorElement.style.display = 'block';
+  brushCursorElement.style.width = `${diameterCssPixels}px`;
+  brushCursorElement.style.height = `${diameterCssPixels}px`;
+  brushCursorElement.style.left = `${left}px`;
+  brushCursorElement.style.top = `${top}px`;
 }
 
 function drawZoomRectangle() {
@@ -622,6 +650,7 @@ function handlePointerEnter(event) {
 function handlePointerLeave(event) {
   handlePointerUp(event);
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   clearBrushPreview();
 }
 
@@ -803,6 +832,7 @@ async function loadCase(imageFileId) {
   brushOverlayCanvas = null;
   brushOverlayCtx = null;
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   viewport = null;
   setZoomMode(false);
   resetUndoStack();
@@ -866,6 +896,7 @@ datasetSelect.addEventListener('change', async () => {
   brushOverlayCanvas = null;
   brushOverlayCtx = null;
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   viewport = null;
   setZoomMode(false);
   resetUndoStack();
@@ -888,6 +919,7 @@ outputDatasetSelect.addEventListener('change', async () => {
   brushOverlayCanvas = null;
   brushOverlayCtx = null;
   lastBrushPreviewPoint = null;
+  brushCursorElement = null;
   viewport = null;
   setZoomMode(false);
   resetUndoStack();

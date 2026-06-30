@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from .auth import create_access_token
 from .serializers import UserReadSerializer
+from core.datasets.system import sync_builtin_model_files_dataset_for_user
 
 @api_view(['POST'])
 @authentication_classes([])
@@ -19,6 +20,7 @@ def register(request):
     if User.objects.filter(username=email).exists():
         raise ValidationError('Email already registered')
     user = User.objects.create_user(username=email, password=password, email=email)
+    sync_builtin_model_files_dataset_for_user(user)
     return Response(UserReadSerializer(user).data, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])

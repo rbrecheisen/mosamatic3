@@ -3,6 +3,9 @@ from django.contrib.auth import authenticate, login as django_login, logout as d
 from django.contrib.auth.models import User
 from django.shortcuts import redirect, render
 
+from core.datasets.system import sync_builtin_model_files_dataset_for_user
+
+
 def login_page(request):
     if request.method == 'POST':
         username = request.POST.get('username') or ''
@@ -28,6 +31,7 @@ def register_page(request):
             messages.error(request, 'Email already registered')
         else:
             user = User.objects.create_user(username=email, email=email, password=password)
+            sync_builtin_model_files_dataset_for_user(user)
             django_login(request, user)
             return redirect('home')
     return render(request, 'accounts/register.html')
