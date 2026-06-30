@@ -29,5 +29,9 @@ itemsToInclude=(
 )
 
 cd "$root" || exit 1
+
 rm -f "$zipFilePath"
-zip -r "$zipFilePath" "${itemsToInclude[@]}"
+
+zip -r "$zipFilePath" "${itemsToInclude[@]}" \
+  -x "core/systemdatasets/*" \
+  -x "core/systemdatasets/**"

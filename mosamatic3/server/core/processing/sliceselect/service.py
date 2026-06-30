@@ -299,10 +299,12 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
     if errors or selected_slice is None or z_vertebra is None:
         result['errors'].extend(errors or ['No slice selected'])
         return [], result
+    
+    patient_id_path_part_index = int(params.get('patient_id_path_part_index') or 1)
 
     patient_id = patient_id_from_relative_path(
         scan.relative_files[0] if scan.relative_files else scan.relative_path,
-        params.patient_id_path_part_index,
+        patient_id_path_part_index,
         scan.series_instance_uid[-12:],
     )
     prefix = relative_output_prefix(params.vertebral_level, patient_id, scan.series_instance_uid)

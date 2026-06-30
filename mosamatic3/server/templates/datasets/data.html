@@ -2,7 +2,12 @@
 {% block content %}
 <section class="card">
   <h2>Upload files or folders</h2>
-  <p class="muted">Each upload is stored as one dataset under the configured upload root.</p>
+  <p class="muted">
+    Each upload is stored as one dataset under the configured upload root.<br>
+    You can upload a maximum of 10000 files with a total size of max. 10GB. If your dataset is larger, split it up and upload in batches.<br>
+    If you upload multiple CT scans, make sure the folder you select contains only patient folders with CT images. For example, "abdomen/patient1",
+    "abdomen/patient2", etc. The CT images of one scan MUST be in a single folder but may be nested further down inside the patient folder.
+  </p>
   <form id="upload-form" class="stack">
     {% csrf_token %}
     <label>Dataset name <input name="name" required></label>

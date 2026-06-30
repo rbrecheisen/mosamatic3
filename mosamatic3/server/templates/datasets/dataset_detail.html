@@ -6,36 +6,76 @@
       <h2>{{ dataset.name }}</h2>
       <p class="muted">{{ dataset.file_count }} file(s)</p>
       <p class="muted">{{ dataset.total_size_bytes }} bytes</p>
-      <p class="muted">created {{ dataset.created_at}}</p>
+      <p class="muted">created {{ dataset.created_at }}</p>
       <p class="muted">Type: {{ dataset.kind }}</p>
       <p class="muted">Status: {{ dataset.status }}</p>
       <p class="muted">Source task: {{ dataset.source_task_key|default:"-" }}</p>
-      </p>
     </div>
     <a class="button-like" href="/api/datasets/{{ dataset.id }}/download/">Download ZIP</a>
   </div>
+
   <a class="button-like secondary" href="{% url 'data' %}">Back to datasets</a>
 </section>
-<section class="card">
-  {% if dataset.files.all %}
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Relative path</th>
-          <th>Size bytes</th>
-          <th>Created</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for file in dataset.files.all %}
+
+{% if selected_file %}
+  <section class="card">
+    <div class="dataset-preview-header">
+      <a class="button-like secondary" href="{% url 'dataset_detail' dataset.id %}">Back</a>
+      <div>
+        <h3>{{ selected_file.relative_path }}</h3>
+        <p class="muted">{{ selected_file.size_bytes }} bytes</p>
+      </div>
+    </div>
+
+    {% if selected_preview_type == 'image' %}
+      <div class="dataset-preview-image-wrap">
+        <img
+          class="dataset-preview-image"
+          src="{% url 'dataset_file_raw' dataset.id selected_file.id %}"
+          alt="{{ selected_file.relative_path }}"
+        >
+      </div>
+    {% elif selected_preview_type == 'text' %}
+      {% if selected_text_truncated %}
+        <p class="muted">
+          Preview truncated to the first 2 MB.
+        </p>
+      {% endif %}
+      <pre class="dataset-preview-text">{{ selected_text_content }}</pre>
+    {% endif %}
+  </section>
+{% else %}
+  <section class="card">
+    {% if file_rows %}
+      <table class="data-table">
+        <thead>
           <tr>
-            <td>{{ file.relative_path }}</td>
-            <td>{{ file.size_bytes }}</td>
-            <td>{{ file.created_at }}</td>
+            <th>Relative path</th>
+            <th>Size bytes</th>
+            <th>Created</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}<p class="muted">This dataset contains no files.</p>{% endif %}
-</section>
+        </thead>
+        <tbody>
+          {% for row in file_rows %}
+            <tr>
+              <td>
+                {% if row.is_viewable %}
+                  <a href="{% url 'dataset_file_detail' dataset.id row.file.id %}">
+                    {{ row.file.relative_path }}
+                  </a>
+                {% else %}
+                  {{ row.file.relative_path }}
+                {% endif %}
+              </td>
+              <td>{{ row.file.size_bytes }}</td>
+              <td>{{ row.file.created_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">This dataset contains no files.</p>
+    {% endif %}
+  </section>
+{% endif %}
 {% endblock %}

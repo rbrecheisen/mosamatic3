@@ -25,7 +25,13 @@ TASKS = {
   'sliceselect': TaskDefinition(
     key='sliceselect',
     name='Slice Select',
-    description='Automatically selects an axial DICOM slice at a requested vertebral level using TotalSegmentator',
+    description=
+"""
+Automatically selects an axial DICOM slice at a requested vertebral level using TotalSegmentator. 
+Upload a single folder containing one or more subfolders for each patient, e.g., a folder "abdomen" that has
+subfolders "patient1" and "patient2". The CT scan images must be in a single folder must can be nested further
+down in the patient folder.
+""",
     celery_task_name='core.processing.tasks.run_sliceselecttask',
     parameter_schema=SliceSelectTaskParameters,
   ),

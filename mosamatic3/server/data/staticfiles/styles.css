@@ -502,3 +502,44 @@ body {
   font-weight: 700;
   box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.25);
 }
+
+.dataset-preview-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dataset-preview-header h3 {
+  margin: 0;
+  word-break: break-word;
+}
+
+.dataset-preview-image-wrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #e2e6f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 1rem;
+}
+
+.dataset-preview-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.dataset-preview-text {
+  max-height: 70vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid #e2e6f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
