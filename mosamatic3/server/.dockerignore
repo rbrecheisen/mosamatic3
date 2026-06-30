@@ -1,0 +1,41 @@
+# Local runtime data - never bake this into the Docker image
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local logs
+logs/
+*.log
+
+# Python cache/build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local env/secrets
+.env
+*.env
+*.secret
+secrets/
+admin_password.txt
+
+# Git/editor/system files
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local generated archives
+_sources.zip
