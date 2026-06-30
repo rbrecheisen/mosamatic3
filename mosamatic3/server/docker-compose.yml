@@ -2,6 +2,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: mosamatic3-django-redis
+    restart: unless-stopped
     ports:
     - "6379:6379"
     volumes:
@@ -10,6 +11,7 @@ services:
   web:
     image: brecheisen/mosamatic3:latest
     container_name: mosamatic3-django-web
+    restart: unless-stopped
     environment:
       SECRET_KEY: change-me-in-production
       DEBUG: "0"
@@ -39,6 +41,7 @@ services:
   pipeline-worker:
     image: brecheisen/mosamatic3:latest
     container_name: mosamatic3-django-pipeline-worker
+    restart: unless-stopped
     environment:
       SECRET_KEY: change-me-in-production
       DEBUG: "0"
@@ -66,6 +69,7 @@ services:
   task-worker:
     image: brecheisen/mosamatic3:latest
     container_name: mosamatic3-django-task-worker
+    restart: unless-stopped
     environment:
       SECRET_KEY: change-me-in-production
       DEBUG: "0"
@@ -93,6 +97,7 @@ services:
   nginx:
     image: nginx:1.27-alpine
     container_name: mosamatic3-django-nginx
+    restart: unless-stopped
     ports:
       - "8000:80"
     volumes:
