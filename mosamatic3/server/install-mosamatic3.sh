@@ -3,7 +3,8 @@
 set -e
 
 INSTALL_DIR="$HOME/mosamatic3"
-COMPOSE_URL="https://raw.githubusercontent.com/YOURUSER/YOURREPO/main/docker-compose.yml"
+COMPOSE_URL="https://raw.githubusercontent.com/rbrecheisen/mosamatic3/refs/heads/main/mosamatic3/server/docker-compose.yml"
+NGINX_CONF_URL="https://raw.githubusercontent.com/rbrecheisen/mosamatic3/refs/heads/main/mosamatic3/server/nginx/nginx.conf"
 
 echo "Checking Docker..."
 
@@ -21,11 +22,14 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 echo "Creating install directory..."
-mkdir -p "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/nginx"
 cd "$INSTALL_DIR" || exit 1
 
 echo "Downloading docker-compose.yml..."
 curl -L "$COMPOSE_URL" -o docker-compose.yml
+
+echo "Downloading nginx.conf..."
+curl -L "$NGINX_CONF_URL" -o nginx/nginx.conf
 
 echo "Pulling Docker images..."
 docker compose pull
