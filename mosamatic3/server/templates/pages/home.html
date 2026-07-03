@@ -3,6 +3,13 @@
 <section class="card">
   <p class="eyebrow">Welcome</p>
   <h2>Hello{% if request.user.username %}, {{ request.user.username }}{% endif %}.</h2>
-  <p class="muted">You are logged in. From here you can upload <a href="{% url 'data' %}">data</a>, start <a href="{% url 'tasks' %}">tasks</a>, or run <a href="{% url 'pipelines' %}">pipelines</a>.</p>
+  <p class="muted">
+    You are logged in.
+  </p>
+  <p class="muted">
+    From here you can upload <a href="{% url 'data' %}">data</a>, start <a href="{% url 'tasks' %}">tasks</a>, or run <a href="{% url 'pipelines' %}">pipelines</a>. 
+    If you have automatically created segmentation masks you can manually correct them using the <a href="{% url 'manual_editor' %}">manual editor</a>. The output of the editor can then
+    be used again in the calculate scores task.
+  </p>
 </section>
 {% endblock %}
