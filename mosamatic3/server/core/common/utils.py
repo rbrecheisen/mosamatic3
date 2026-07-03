@@ -5,7 +5,6 @@ import textwrap
 import math
 import pendulum
 import numpy as np
-import nibabel as nb
 import struct
 import binascii
 import warnings
@@ -81,16 +80,6 @@ def duration(seconds):
     remainder = remainder - m * 60
     s = int(math.floor(remainder))
     return '{} hours, {} minutes, {} seconds'.format(h, m, s)
-
-
-def is_nifti(f):
-    return f.endswith('.nii') or f.endswith('.nii.gz')
-
-
-def load_nifti(f):
-    if is_nifti(f):
-        return nb.load(f)
-    return None
 
 
 def is_numpy_array(value):

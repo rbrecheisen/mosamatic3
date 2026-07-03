@@ -300,7 +300,7 @@ def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_ro
         result['errors'].extend(errors or ['No slice selected'])
         return [], result
     
-    patient_id_path_part_index = int(params.get('patient_id_path_part_index') or 1)
+    patient_id_path_part_index = int(params.patient_id_path_part_index or 1)
 
     patient_id = patient_id_from_relative_path(
         scan.relative_files[0] if scan.relative_files else scan.relative_path,

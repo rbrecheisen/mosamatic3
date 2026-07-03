@@ -90,10 +90,10 @@ class CalculateScoresTaskParameters(BaseModel):
     title='Patient info CSV relative path (optional)',
     description='Optional CSV path inside the patient info dataset. Leave empty if the dataset contains exactly one CSV file.',
   )
-  file_type: Literal['npy', 'nifti', 'tag'] = Field(
+  file_type: Literal['npy', 'tag'] = Field(
     default='npy',
     title='Segmentation file type',
-    description='Use npy for .seg.npy files, nifti for .seg.nii/.seg.nii.gz files, tag for .tag files.',
+    description='Use npy for .seg.npy files or tag for .tag files.',
   )
   input_path_prefix: str | None = Field(
     default='',

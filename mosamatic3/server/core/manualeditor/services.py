@@ -1,13 +1,11 @@
 import base64
+import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-
-import numpy as np
 from rest_framework.exceptions import NotFound, ValidationError
-
 from core.common.dicom import get_pixels_from_dicom_object, is_dicom, load_dicom
-from core.common.utils import MUSCLE, SAT, VAT
+from core.common.utils import MUSCLE, SAT, VAT, get_pixels_from_tag_file
 from core.datasets.services import (
     OutputDatasetFile,
     append_output_files_to_dataset,
@@ -15,7 +13,6 @@ from core.datasets.services import (
     get_dataset_file_path,
 )
 from core.models import Dataset, DatasetFile
-from core.processing.segmentmusclefatl3.service import numpy_to_nifti_to_output_file
 
 
 ALLOWED_SEGMENTATION_LABELS = {0, MUSCLE, VAT, SAT}
@@ -30,6 +27,15 @@ class ManualEditorCase:
     correction_segmentation_file: DatasetFile | None
 
 
+def ignore_unknown_segmentation_labels(segmentation: np.ndarray) -> np.ndarray:
+    segmentation = segmentation.astype(np.uint8, copy=False)
+
+    valid_mask = np.isin(segmentation, list(ALLOWED_SEGMENTATION_LABELS))
+    segmentation = np.where(valid_mask, segmentation, 0).astype(np.uint8)
+
+    return segmentation
+
+
 def get_manual_editor_datasets_for_user(user) -> list[Dataset]:
     """
     Candidate datasets for manual editing.
@@ -39,7 +45,11 @@ def get_manual_editor_datasets_for_user(user) -> list[Dataset]:
     """
     datasets = (
         Dataset.objects
-        .filter(owner=user, kind=Dataset.KIND_OUTPUT, status__in=["done", "ready"])
+        .filter(
+            owner=user, 
+            kind__in=[Dataset.KIND_OUTPUT, Dataset.KIND_INPUT],
+            status__in=["done", "ready"]
+        )
         .prefetch_related("files")
         .order_by("-created_at")
     )
@@ -54,7 +64,7 @@ def get_manual_editor_datasets_for_user(user) -> list[Dataset]:
         for dataset_file in files:
             name = Path(dataset_file.relative_path).name.lower()
 
-            if name.endswith((".seg.npy", ".seg.nii", ".seg.nii.gz")):
+            if name.endswith((".seg.npy", ".tag")):
                 has_segmentation = True
                 continue
 
@@ -76,21 +86,18 @@ def _segmentation_key(relative_path: str) -> str | None:
     """
     Returns the image basename for a segmentation file.
 
-    Example:
+    Examples:
       image001.dcm.seg.npy -> image001.dcm
-      image001.dcm.seg.nii.gz -> image001.dcm
+      image001.dcm.tag     -> image001
+      image001.tag         -> image001
     """
     name = Path(relative_path).name
 
-    suffixes = [
-        ".seg.npy",
-        ".seg.nii.gz",
-        ".seg.nii",
-    ]
+    if name.endswith(".seg.npy"):
+        return name.removesuffix(".seg.npy")
 
-    for suffix in suffixes:
-        if name.endswith(suffix):
-            return name.removesuffix(suffix)
+    if name.endswith(".tag"):
+        return name.removesuffix(".tag").removesuffix(".dcm")
 
     return None
 
@@ -99,20 +106,12 @@ def _dicom_key(relative_path: str) -> str:
     return Path(relative_path).name
 
 
-def _prefer_numpy(existing: DatasetFile | None, candidate: DatasetFile) -> DatasetFile:
-    """
-    Prefer .npy over .nii/.nii.gz when multiple segmentation files exist.
-    """
-    if existing is None:
-        return candidate
-
-    existing_name = existing.relative_path.lower()
-    candidate_name = candidate.relative_path.lower()
-
-    if candidate_name.endswith(".npy") and not existing_name.endswith(".npy"):
-        return candidate
-
-    return existing
+def _dicom_key_candidates(relative_path: str) -> list[str]:
+    name = Path(relative_path).name
+    return [
+        name,
+        name.removesuffix(".dcm"),
+    ]
 
 
 def get_manual_editor_cases(
@@ -127,10 +126,7 @@ def get_manual_editor_cases(
         key = _segmentation_key(dataset_file.relative_path)
 
         if key is not None:
-            automatic_segmentation_by_key[key] = _prefer_numpy(
-                automatic_segmentation_by_key.get(key),
-                dataset_file,
-            )
+            automatic_segmentation_by_key[key] = dataset_file
             continue
 
         try:
@@ -152,10 +148,7 @@ def get_manual_editor_cases(
             key = _segmentation_key(dataset_file.relative_path)
 
             if key is not None:
-                correction_segmentation_by_key[key] = _prefer_numpy(
-                    correction_segmentation_by_key.get(key),
-                    dataset_file,
-                )
+                correction_segmentation_by_key[key] = dataset_file
                 continue
 
             try:
@@ -172,14 +165,28 @@ def get_manual_editor_cases(
     cases = []
 
     for image_file in dicom_files:
-        key = _dicom_key(image_file.relative_path)
+        key_candidates = _dicom_key_candidates(image_file.relative_path)
+
+        segmentation_file = None
+        correction_image_file = None
+        correction_segmentation_file = None
+
+        for key in key_candidates:
+            if segmentation_file is None:
+                segmentation_file = automatic_segmentation_by_key.get(key)
+
+            if correction_image_file is None:
+                correction_image_file = correction_image_by_key.get(key)
+
+            if correction_segmentation_file is None:
+                correction_segmentation_file = correction_segmentation_by_key.get(key)
 
         cases.append(
             ManualEditorCase(
                 image_file=image_file,
-                segmentation_file=automatic_segmentation_by_key.get(key),
-                correction_image_file=correction_image_by_key.get(key),
-                correction_segmentation_file=correction_segmentation_by_key.get(key),
+                segmentation_file=segmentation_file,
+                correction_image_file=correction_image_file,
+                correction_segmentation_file=correction_segmentation_file,
             )
         )
 
@@ -364,27 +371,24 @@ def _load_segmentation_array(path: Path) -> np.ndarray:
 
     if name.endswith(".npy"):
         segmentation = np.load(path)
-    elif name.endswith((".nii", ".nii.gz")):
-        import SimpleITK as sitk
 
-        image = sitk.ReadImage(str(path))
-        segmentation = sitk.GetArrayFromImage(image)
+    elif name.endswith(".tag"):
+        pixels = get_pixels_from_tag_file(path)
 
-        if segmentation.ndim == 3 and segmentation.shape[0] == 1:
-            segmentation = segmentation[0]
+        try:
+            segmentation = pixels.reshape(512, 512)
+        except Exception as exc:
+            raise ValidationError(
+                f"Could not reshape TAG segmentation to 512x512: {path.name}"
+            ) from exc
+
     else:
         raise ValidationError("Unsupported segmentation file type")
 
     if segmentation.ndim != 2:
         raise ValidationError("Segmentation must be a 2D mask")
 
-    segmentation = segmentation.astype(np.uint8)
-
-    labels = set(np.unique(segmentation).astype(int).tolist())
-    unknown_labels = labels - ALLOWED_SEGMENTATION_LABELS
-
-    if unknown_labels:
-        raise ValidationError(f"Segmentation contains unknown labels: {sorted(unknown_labels)}")
+    segmentation = ignore_unknown_segmentation_labels(segmentation)
 
     return segmentation
 
