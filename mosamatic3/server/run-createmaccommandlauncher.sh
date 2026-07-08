@@ -1,4 +1,3 @@
-
 cat > "run-mosamatic3.command" <<'EOF'
 #!/bin/zsh
 
