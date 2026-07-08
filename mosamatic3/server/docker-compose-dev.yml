@@ -126,41 +126,41 @@ services:
     depends_on:
       - redis
 
-    dicom-scp:
-      image: brecheisen/mosamatic3:latest
-      container_name: mosamatic3-django-dicom-scp
-      environment:
-        SECRET_KEY: change-me-in-production
-        DEBUG: "0"
-        ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
-        DATABASE_URL: sqlite:////data/app.db
-        UPLOAD_ROOT: /data/uploads
-        STATIC_ROOT: /staticfiles
-        ADMIN_USERNAME: admin
-        ADMIN_PASSWORD: admin
-        LOG_DIR: /data/logs
-        LOG_LEVEL: INFO
-        LOG_MAX_BYTES: "10485760"
-        LOG_BACKUP_COUNT: "5"
-        CELERY_BROKER_URL: redis://redis:6379/0
-        CELERY_RESULT_BACKEND: redis://redis:6379/0
-        DICOM_INBOX_ROOT: /data/dicom_inbox
-        DICOM_SCP_AE_TITLE: MOSAMATIC3
-        DICOM_SCP_HOST: 0.0.0.0
-        DICOM_SCP_PORT: "11112"
-        DICOM_IMPORT_OWNER_USERNAME: admin
-        DICOM_IMPORT_STABLE_SECONDS: "60"
-        DICOM_IMPORT_AUTO_RUN: "0"
-        DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
-      volumes:
-        - server_data:/data
-        - staticfiles:/staticfiles
-      command: ["python", "manage.py", "run_dicom_scp"]
-      ports:
-        - "11112:11112"
-      depends_on:
-        - redis
-        - web
+  dicom-scp:
+    image: brecheisen/mosamatic3:latest
+    container_name: mosamatic3-django-dicom-scp
+    environment:
+      SECRET_KEY: change-me-in-production
+      DEBUG: "0"
+      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      DATABASE_URL: sqlite:////data/app.db
+      UPLOAD_ROOT: /data/uploads
+      STATIC_ROOT: /staticfiles
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin
+      LOG_DIR: /data/logs
+      LOG_LEVEL: INFO
+      LOG_MAX_BYTES: "10485760"
+      LOG_BACKUP_COUNT: "5"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DICOM_INBOX_ROOT: /data/dicom_inbox
+      DICOM_SCP_AE_TITLE: MOSAMATIC3
+      DICOM_SCP_HOST: 0.0.0.0
+      DICOM_SCP_PORT: "11112"
+      DICOM_IMPORT_OWNER_USERNAME: admin
+      DICOM_IMPORT_STABLE_SECONDS: "60"
+      DICOM_IMPORT_AUTO_RUN: "0"
+      DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
+    volumes:
+      - server_data:/data
+      - staticfiles:/staticfiles
+    command: ["python", "manage.py", "run_dicom_scp"]
+    ports:
+      - "11112:11112"
+    depends_on:
+      - redis
+      - web
 
   nginx:
     image: nginx:1.27-alpine
