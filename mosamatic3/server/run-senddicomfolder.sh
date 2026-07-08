@@ -2,6 +2,9 @@
 
 set -e
 
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate mosamatic3
+
 cd "$HOME/Documents/Development/GitHub/mosamatic3/mosamatic3/server" || exit 1
 
 python scripts/send_dicom_folder.py \

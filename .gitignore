@@ -6,6 +6,7 @@ mosamatic3/server/core/systemdatasets/modelfiles
 mosamatic3/server/data/admin_password.txt
 chatgpt/mosamatic3_django_migration/data/admin_password.txt
 mosamatic3/server/data/logs/*
+mosamatic3/server/logs/*
 !mosamatic3/server/data/logs/.gitkeep
 *.db
 

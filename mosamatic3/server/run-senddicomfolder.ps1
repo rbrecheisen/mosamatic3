@@ -1,3 +1,5 @@
+conda activate mosamatic3
+
 $ErrorActionPreference = "Stop"
 
 python scripts\send_dicom_folder.py `
