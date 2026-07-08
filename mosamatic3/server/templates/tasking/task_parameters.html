@@ -10,7 +10,11 @@
       <button id="cancel-button-top" type="button" class="warning" style="display:none">Cancel</button>
     </div>
     <div id="fields"></div>
-    <div class="row"><button id="save-button" type="submit">Save parameters</button><button id="run-button-bottom" type="button" disabled>Run</button><button id="cancel-button" type="button" class="warning" style="display:none">Cancel</button></div>
+    <div class="row">
+      <button id="save-button" type="submit">Save parameters</button>
+      <button id="run-button-bottom" type="button" disabled>Run</button>
+      <button id="cancel-button-bottom" type="button" class="warning" style="display:none">Cancel</button>
+    </div>
   </form>
   <p id="task-message" class="message" style="display:none"></p>
 </section>
@@ -40,7 +44,7 @@ const runButtons = [
 const cancelButtons = [
   document.getElementById('cancel-button-top'),
   document.getElementById('cancel-button-bottom'),
-];
+].filter(Boolean);
 
 function setRunButtonsDisabled(disabled) {
   runButtons.forEach(button => button.disabled = disabled);

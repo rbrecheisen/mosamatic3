@@ -216,11 +216,41 @@ label {
 
 .user-box {
   display: flex;
-  gap: 0.75rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.55rem;
+  align-items: flex-end;
   background: rgb(255 255 255 / 12%);
   padding: 0.7rem;
   border-radius: 14px;
+}
+
+.user-actions-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.manual-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255 / 86%);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.manual-link-button:hover {
+  background: rgb(255 255 255 / 16%);
+  color: white;
+  text-decoration: none;
 }
 
 .main-tabs {

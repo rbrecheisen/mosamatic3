@@ -43,6 +43,8 @@ class CandidateScan:
 
 fast_mode = True
 create_review_pngs = True
+thumbnail_columns = 5
+thumbnail_overview_relative_path = 'sagittal_thumbnails.png'
 
 
 def read_dicom_header(file_path: Path):
@@ -267,6 +269,77 @@ def sagittal_review_png_bytes(scan_dir: Path, mask_file: Path, z_vertebra: float
     return buffer.getvalue()
 
 
+def sagittal_thumbnail_overview_png_bytes(
+    output_dataset: Dataset,
+    manifest: dict[str, Any],
+    thumbnail_width: int,
+) -> bytes | None:
+    root = dataset_upload_root(output_dataset.owner_id, output_dataset.id)
+
+    sagittal_paths: list[str] = []
+
+    for scan_info in manifest.get('scans', {}).values():
+        if scan_info.get('status') != 'completed':
+            continue
+
+        for relative_path in scan_info.get('output_files') or []:
+            if relative_path.endswith('_sagittal.png'):
+                sagittal_paths.append(relative_path)
+
+    sagittal_paths = sorted(sagittal_paths)
+
+    if not sagittal_paths:
+        return None
+
+    thumbnails: list[Image.Image] = []
+
+    for relative_path in sagittal_paths:
+        image_path = root / safe_relative_path(relative_path)
+
+        if not image_path.exists() or not image_path.is_file():
+            continue
+
+        with Image.open(image_path) as image:
+            image = image.convert('RGB')
+
+            width, height = image.size
+            if width <= 0 or height <= 0:
+                continue
+
+            thumbnail_height = max(1, int(round(height * thumbnail_width / width)))
+            thumbnail = image.resize((thumbnail_width, thumbnail_height), Image.Resampling.LANCZOS)
+            thumbnails.append(thumbnail)
+
+    if not thumbnails:
+        return None
+
+    columns = min(thumbnail_columns, len(thumbnails))
+    rows = math.ceil(len(thumbnails) / columns)
+
+    cell_width = thumbnail_width
+    cell_height = max(image.height for image in thumbnails)
+
+    overview = Image.new(
+        'RGB',
+        (columns * cell_width, rows * cell_height),
+        color='white',
+    )
+
+    for index, thumbnail in enumerate(thumbnails):
+        row = index // columns
+        column = index % columns
+
+        x = column * cell_width
+        # y = row * cell_height + (cell_height - thumbnail.height) // 2
+        y = row * cell_height
+
+        overview.paste(thumbnail, (x, y))
+
+    buffer = BytesIO()
+    overview.save(buffer, format='PNG')
+    return buffer.getvalue()
+
+
 def relative_output_prefix(vertebral_level: str, patient_id: str, series_uid: str) -> str:
     safe_patient = clean_filename_part(patient_id, 'unknown_patient')
     safe_series = clean_filename_part(series_uid[-12:], 'series')
@@ -354,6 +427,8 @@ def empty_manifest(*, params: SliceSelectTaskParameters, parameter_hash: str, in
         'input_dataset_id': str(input_dataset.id),
         'input_dataset_name': input_dataset.name,
         'vertebral_level': params.vertebral_level,
+        'thumbnail_width': params.thumbnail_width,
+        'thumbnail_overview': thumbnail_overview_relative_path,
         'fast_mode': fast_mode,
         'parameter_hash': parameter_hash,
         'status': 'in_progress',
@@ -578,6 +653,27 @@ def run_slice_select_task(parameters: dict, user_id: str, celery_task=None) -> d
 
         completed_count = manifest.get('completed_count', 0)
         failed_count = manifest.get('failed_count', 0)
+
+        if create_review_pngs and completed_count > 0:
+            overview_png = sagittal_thumbnail_overview_png_bytes(
+                output_dataset=output_dataset,
+                manifest=manifest,
+                thumbnail_width=params.thumbnail_width,
+            )
+
+            if overview_png is not None:
+                append_output_files_to_dataset(
+                    output_dataset,
+                    [
+                        OutputDatasetFile(
+                            relative_path=thumbnail_overview_relative_path,
+                            content=overview_png,
+                        )
+                    ],
+                )
+
+                manifest['thumbnail_overview'] = thumbnail_overview_relative_path
+                manifest['thumbnail_width'] = params.thumbnail_width
 
         manifest['status'] = 'done'
         save_manifest(output_dataset, manifest)

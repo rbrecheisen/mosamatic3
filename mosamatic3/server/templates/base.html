@@ -18,9 +18,19 @@
       </div>
       <div class="user-box">
         {% if request.user.is_authenticated %}
-          <span>{{ request.user.username }}</span>
-          <a class="button-like secondary" href="{% url 'change_password' %}">Change password</a>
-          <a class="button-like warning" href="{% url 'logout' %}">Logout</a>
+          <div class="user-actions-row">
+            <span>{{ request.user.username }}</span>
+            <a class="button-like secondary" href="{% url 'change_password' %}">Change password</a>
+            <a class="button-like warning" href="{% url 'logout' %}">Logout</a>
+          </div>
+          <a
+            class="manual-link-button"
+            href="https://mosamatic.rbeesoft.nl/wordpress/mosamatic/user-manual/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Go to the user manual
+          </a>
         {% else %}
           <a class="button-like secondary" href="{% url 'login' %}">Login</a>
           <a class="button-like secondary" href="{% url 'register' %}">Register</a>

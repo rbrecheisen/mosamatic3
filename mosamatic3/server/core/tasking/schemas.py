@@ -39,6 +39,13 @@ class SliceSelectTaskParameters(BaseModel):
     default='L3', 
     title='Vertebral level'
   )
+  thumbnail_width: int = Field(
+    default=220,
+    title='Thumbnail width',
+    ge=80,
+    le=1000,
+    description='Fixed width in pixels for sagittal thumbnails in the overview PNG. Height is scaled to preserve aspect ratio.'
+  )
   patient_id_path_part_index: int = Field(
     default=1, 
     title='Patient ID part index (advanced, default=1)'
