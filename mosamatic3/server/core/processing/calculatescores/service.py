@@ -413,18 +413,18 @@ def run_calculate_scores_task(parameters: dict, user_id: str, celery_task=None) 
             'muscle_area': [],
             'muscle_idx': [],
             'muscle_ra': [],
-            'muscle_lama_perc': [],
+            # 'muscle_lama_perc': [],
             'vat_area': [],
             'vat_idx': [],
             'vat_ra': [],
             'sat_area': [],
             'sat_idx': [],
             'sat_ra': [],
-            'bmi': [],
-            'sarcopenia': [],
-            'sarcopenic_obesity': [],
-            'myosteatosis': [],
-            'visceral_obesity': [],
+            # 'bmi': [],
+            # 'sarcopenia': [],
+            # 'sarcopenic_obesity': [],
+            # 'myosteatosis': [],
+            # 'visceral_obesity': [],
         }
 
         output_files: list[OutputDatasetFile] = []
@@ -519,18 +519,18 @@ def run_calculate_scores_task(parameters: dict, user_id: str, celery_task=None) 
                 data['muscle_area'].append(muscle_area)
                 data['muscle_idx'].append(muscle_idx)
                 data['muscle_ra'].append(muscle_ra)
-                data['muscle_lama_perc'].append(muscle_lama_perc)
+                # data['muscle_lama_perc'].append(muscle_lama_perc)
                 data['vat_area'].append(vat_area)
                 data['vat_idx'].append(vat_idx)
                 data['vat_ra'].append(vat_ra)
                 data['sat_area'].append(sat_area)
                 data['sat_idx'].append(sat_idx)
                 data['sat_ra'].append(sat_ra)
-                data['bmi'].append(bmi)
-                data['sarcopenia'].append(sarcopenia)
-                data['sarcopenic_obesity'].append(sarcopenic_obesity)
-                data['myosteatosis'].append(myosteatosis)
-                data['visceral_obesity'].append(visceral_obesity)
+                # data['bmi'].append(bmi)
+                # data['sarcopenia'].append(sarcopenia)
+                # data['sarcopenic_obesity'].append(sarcopenic_obesity)
+                # data['myosteatosis'].append(myosteatosis)
+                # data['visceral_obesity'].append(visceral_obesity)
 
                 runtime.update_progress(
                     current=current,

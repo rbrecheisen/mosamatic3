@@ -7,7 +7,10 @@
 
   <form id="pipeline-form" class="stack">
     {% csrf_token %}
-
+    <div class="row">
+      <button type="submit">Run pipeline</button>
+      <a class="button-like secondary" href="{% url 'pipelines' %}">Back</a>
+    </div>
     <label class="parameter-field">
       Initial input dataset
       <select id="initial-dataset" name="initial_dataset_id" required>

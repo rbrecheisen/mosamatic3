@@ -5,8 +5,12 @@
   <p class="muted">{{ task.description }}</p>
   <form id="params-form" class="stack">
     {% csrf_token %}
+    <div class="row">
+      <button id="run-button-top" type="button" disabled>Run</button>
+      <button id="cancel-button-top" type="button" class="warning" style="display:none">Cancel</button>
+    </div>
     <div id="fields"></div>
-    <div class="row"><button id="save-button" type="submit">Save parameters</button><button id="run-button" type="button" disabled>Run</button><button id="cancel-button" type="button" class="warning" style="display:none">Cancel</button></div>
+    <div class="row"><button id="save-button" type="submit">Save parameters</button><button id="run-button-bottom" type="button" disabled>Run</button><button id="cancel-button" type="button" class="warning" style="display:none">Cancel</button></div>
   </form>
   <p id="task-message" class="message" style="display:none"></p>
 </section>
@@ -28,8 +32,30 @@ const datasets = [
 ];
 const fields = document.getElementById('fields');
 const message = document.getElementById('task-message');
-const runButton = document.getElementById('run-button');
-const cancelButton = document.getElementById('cancel-button');
+const runButtons = [
+  document.getElementById('run-button-top'),
+  document.getElementById('run-button-bottom'),
+];
+
+const cancelButtons = [
+  document.getElementById('cancel-button-top'),
+  document.getElementById('cancel-button-bottom'),
+];
+
+function setRunButtonsDisabled(disabled) {
+  runButtons.forEach(button => button.disabled = disabled);
+}
+
+function showRunButtons() {
+  runButtons.forEach(button => button.style.display = 'inline-flex');
+  cancelButtons.forEach(button => button.style.display = 'none');
+}
+
+function showCancelButtons() {
+  runButtons.forEach(button => button.style.display = 'none');
+  cancelButtons.forEach(button => button.style.display = 'inline-flex');
+}
+
 let activeTaskId = null;
 
 function show(text){ message.style.display='block'; message.textContent=text; }
@@ -72,7 +98,7 @@ function buildField(name, prop){
 }
 
 Object.entries(schema.properties || {}).forEach(([name, prop]) => buildField(name, prop));
-runButton.disabled = Object.keys(saved).length === 0;
+setRunButtonsDisabled(Object.keys(saved).length === 0);
 document.getElementById('params-form').addEventListener('submit', async (event)=>{
   event.preventDefault();
   const params = {};
@@ -93,19 +119,49 @@ document.getElementById('params-form').addEventListener('submit', async (event)=
     }
   });
   const response = await fetch(`/api/tasks/${taskKey}/parameters/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':window.csrfToken}, body:JSON.stringify({task_key:taskKey, parameters:params})});
-  if(response.ok){ show('Parameters saved.'); runButton.disabled=false; } else show(await response.text());
+  if(response.ok){ show('Parameters saved.'); setRunButtonsDisabled(false); } else show(await response.text());
 });
-runButton.addEventListener('click', async ()=>{
-  const response = await fetch(`/api/tasks/${taskKey}/run/`, {method:'POST', headers:{'X-CSRFToken':window.csrfToken}});
-  if(!response.ok){ show(await response.text()); return; }
-  const data = await response.json(); activeTaskId = data.task_id; runButton.style.display='none'; cancelButton.style.display='inline-flex'; pollStatus();
-});
-cancelButton.addEventListener('click', async ()=>{ if(!activeTaskId) return; await fetch(`/api/tasks/${activeTaskId}/cancel/`, {method:'POST', headers:{'X-CSRFToken':window.csrfToken}}); show('Cancel requested.'); });
+
+async function runTask() {
+  const response = await fetch(`/api/tasks/${taskKey}/run/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': window.csrfToken}
+  });
+
+  if (!response.ok) {
+    show(await response.text());
+    return;
+  }
+
+  const data = await response.json();
+  activeTaskId = data.task_id;
+  showCancelButtons();
+  pollStatus();
+}
+
+runButtons.forEach(button => button.addEventListener('click', runTask));
+
+async function cancelTask() {
+  if (!activeTaskId) return;
+
+  await fetch(`/api/tasks/${activeTaskId}/cancel/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': window.csrfToken}
+  });
+
+  show('Cancel requested.');
+}
+
+cancelButtons.forEach(button => button.addEventListener('click', cancelTask));
+
 async function pollStatus(){
   if(!activeTaskId) return;
   const r = await fetch(`/api/tasks/${activeTaskId}/`); const s = await r.json();
   show(`${s.state}: ${s.message || ''} ${s.current !== undefined ? `(${s.current}/${s.total})` : ''}`);
-  if(['SUCCESS','FAILURE','REVOKED'].includes(s.state)){ runButton.style.display='inline-flex'; cancelButton.style.display='none'; return; }
+  if(['SUCCESS','FAILURE','REVOKED'].includes(s.state)){
+    showRunButtons();
+    return;
+  }
   setTimeout(pollStatus, 1000);
 }
 </script>
