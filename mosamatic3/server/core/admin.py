@@ -7,6 +7,8 @@ from .models import (
     TaskRun,
     PipelineRun,
     PipelineStepRun,
+    DicomImportSession,
+    DicomImportFile,
 )
 
 admin.site.register(Dataset)
@@ -16,3 +18,5 @@ admin.site.register(TaskRun)
 admin.site.register(PipelineRun)
 admin.site.register(PipelineStepRun)
 admin.site.register(FormSubmission)
+admin.site.register(DicomImportSession)
+admin.site.register(DicomImportFile)

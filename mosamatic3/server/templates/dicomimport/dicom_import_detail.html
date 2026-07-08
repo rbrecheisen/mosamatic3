@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">DICOM import</p>
+      <h2>{{ session.patient_id|default:"Unknown patient" }}</h2>
+      <p class="muted">
+        {{ session.series_description|default:"No series description" }}
+      </p>
+    </div>
+
+    <div class="button-row">
+      {% if session.status == "ready_for_review" or session.status == "dataset_created" %}
+        {% if not session.dataset %}
+          <form method="post" action="{% url 'dicom_import_create_dataset' session.id %}">
+            {% csrf_token %}
+            <button class="button-like" type="submit">Create dataset only</button>
+          </form>
+        {% endif %}
+
+        <form method="post" action="{% url 'dicom_import_run_l3_analysis' session.id %}">
+          {% csrf_token %}
+          <button class="button-like primary" type="submit">Run Default L3 analysis</button>
+        </form>
+      {% endif %}
+
+      {% if not session.pipeline_run %}
+        <form method="post" action="{% url 'dicom_import_delete' session.id %}">
+          {% csrf_token %}
+          <button class="button-like warning" type="submit">Delete import</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div>
+      <strong>Status</strong><br>
+      {{ session.get_status_display }}
+    </div>
+    <div>
+      <strong>Files</strong><br>
+      {{ session.file_count }}
+    </div>
+    <div>
+      <strong>Total size</strong><br>
+      {{ session.total_size_bytes|filesizeformat }}
+    </div>
+    <div>
+      <strong>Modality</strong><br>
+      {{ session.modality }}
+    </div>
+    <div>
+      <strong>Calling AE</strong><br>
+      {{ session.calling_ae_title|default:"-" }}
+    </div>
+    <div>
+      <strong>Called AE</strong><br>
+      {{ session.called_ae_title|default:"-" }}
+    </div>
+    <div>
+      <strong>First received</strong><br>
+      {{ session.first_file_received_at|date:"Y-m-d H:i:s" }}
+    </div>
+    <div>
+      <strong>Last received</strong><br>
+      {{ session.last_file_received_at|date:"Y-m-d H:i:s" }}
+    </div>
+  </div>
+
+  <hr>
+
+  <h3>DICOM identifiers</h3>
+  <p><strong>StudyInstanceUID:</strong> <code>{{ session.study_instance_uid }}</code></p>
+  <p><strong>SeriesInstanceUID:</strong> <code>{{ session.series_instance_uid }}</code></p>
+
+  {% if session.dataset %}
+    <p>
+      <strong>Dataset:</strong>
+      <a href="{% url 'dataset_detail' session.dataset.id %}">{{ session.dataset.name }}</a>
+    </p>
+  {% endif %}
+
+  {% if session.pipeline_run %}
+    <p>
+      <strong>Pipeline run:</strong>
+      {{ session.pipeline_run.name }} — {{ session.pipeline_run.status }}
+    </p>
+  {% endif %}
+
+  {% if session.error_message %}
+    <p class="message error">{{ session.error_message }}</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h3>Received files</h3>
+
+  <div class="table-wrap">
+    <table class="dataset-table">
+      <thead>
+        <tr>
+          <th>Instance</th>
+          <th>Z position</th>
+          <th>File</th>
+          <th>Size</th>
+          <th>Received</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for file in files %}
+          <tr>
+            <td>{{ file.instance_number|default:"-" }}</td>
+            <td>{{ file.image_position_patient_z|default:"-" }}</td>
+            <td><code>{{ file.relative_path }}</code></td>
+            <td>{{ file.size_bytes|filesizeformat }}</td>
+            <td>{{ file.received_at|date:"Y-m-d H:i:s" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if session.files.count > 500 %}
+    <p class="muted">Showing first 500 files only.</p>
+  {% endif %}
+</section>
+{% endblock %}

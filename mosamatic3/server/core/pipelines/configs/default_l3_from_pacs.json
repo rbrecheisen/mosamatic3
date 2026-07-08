@@ -1,34 +1,35 @@
 {
-  "name": "Default body composition pipeline",
+  "name": "Default L3 body composition from PACS import",
   "version": 1,
   "steps": [
-    {
-      "id": "rescale",
-      "task_key": "rescaledicomimages",
-      "input_parameter": "dataset_id",
-      "input_dataset": "$initial_dataset",
-      "parameters": {
-        "target_size": 512
-      }
-    },
     {
       "id": "sliceselect",
       "task_key": "sliceselect",
       "input_parameter": "dataset_id",
-      "input_dataset": "$steps.rescale.output_dataset",
+      "input_dataset": "$initial_dataset",
       "parameters": {
         "vertebral_level": "L3",
-        "patient_id_path_part_index": 1
+        "thumbnail_width": 220,
+        "patient_id_path_part_index": 0
+      }
+    },
+    {
+      "id": "rescale",
+      "task_key": "rescaledicomimages",
+      "input_parameter": "dataset_id",
+      "input_dataset": "$steps.sliceselect.output_dataset",
+      "parameters": {
+        "target_size": 512
       }
     },
     {
       "id": "segment",
       "task_key": "segmentmusclefatl3tensorflow",
       "input_parameter": "dataset_id",
-      "input_dataset": "$steps.sliceselect.output_dataset",
+      "input_dataset": "$steps.rescale.output_dataset",
       "parameters": {
         "model_files_dataset_id": null,
-        "model_version": "1",
+        "model_version": "1.0",
         "input_path_prefix": "",
         "probabilities": false
       }

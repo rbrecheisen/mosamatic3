@@ -12,6 +12,7 @@ urlpatterns = [
     path("", include("core.pipelines.urls")),
     path("", include("core.manualeditor.urls")),
     path("", include("core.adminpanel.urls")),
+    path("", include("core.dicomimport.urls")),
 
     path("api/health/", health),
 

@@ -42,6 +42,7 @@
       <nav class="main-tabs">
         <a class="main-tab {% if request.resolver_match.url_name == 'home' %}main-tab-active{% endif %}" href="{% url 'home' %}">Home</a>
         <a class="main-tab {% if request.resolver_match.url_name == 'data' or request.resolver_match.url_name == 'dataset_detail' %}main-tab-active{% endif %}" href="{% url 'data' %}">Data</a>
+        <a class="main-tab {% if request.resolver_match.url_name == 'dicom_imports' or request.resolver_match.url_name == 'dicom_import_detail' %}main-tab-active{% endif %}" href="{% url 'dicom_imports' %}">DICOM Imports</a>
         <a class="main-tab {% if request.resolver_match.url_name == 'tasks' or request.resolver_match.url_name == 'task_parameters' %}main-tab-active{% endif %}" href="{% url 'tasks' %}">Tasks</a>
         <a class="main-tab {% if request.resolver_match.url_name == 'pipelines' %}main-tab-active{% endif %}" href="{% url 'pipelines' %}">Pipelines</a>
         <a class="main-tab {% if request.resolver_match.url_name == 'manual_editor' %}main-tab-active{% endif %}" href="{% url 'manual_editor' %}">Manual Editor</a>

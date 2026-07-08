@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+  <div class="panel-header">
+    <div>
+      <p class="eyebrow">PACS receiver</p>
+      <h2>DICOM imports</h2>
+      <p class="muted">
+        Review CT series received via DICOM Storage Push before creating datasets or running the L3 body composition pipeline.
+      </p>
+    </div>
+  </div>
+
+  {% if sessions %}
+    <div class="table-wrap">
+      <table class="dataset-table">
+        <thead>
+          <tr>
+            <th>Received</th>
+            <th>Patient</th>
+            <th>Series</th>
+            <th>Modality</th>
+            <th>Files</th>
+            <th>Status</th>
+            <th>Dataset</th>
+            <th>Pipeline</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for session in sessions %}
+            <tr>
+              <td>
+                <a href="{% url 'dicom_import_detail' session.id %}">
+                  {{ session.last_file_received_at|date:"Y-m-d H:i" }}
+                </a>
+              </td>
+              <td>
+                <strong>{{ session.patient_id|default:"Unknown" }}</strong><br>
+                <span class="muted">{{ session.patient_name }}</span>
+              </td>
+              <td>
+                {{ session.series_description|default:"No description" }}<br>
+                <span class="muted">{{ session.series_instance_uid }}</span>
+              </td>
+              <td>{{ session.modality }}</td>
+              <td>{{ session.file_count }}</td>
+              <td>{{ session.get_status_display }}</td>
+              <td>
+                {% if session.dataset %}
+                  <a href="{% url 'dataset_detail' session.dataset.id %}">Open dataset</a>
+                {% else %}
+                  <span class="muted">None</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if session.pipeline_run %}
+                  {{ session.pipeline_run.status }}
+                {% else %}
+                  <span class="muted">None</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No DICOM imports received yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
