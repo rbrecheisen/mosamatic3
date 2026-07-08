@@ -141,6 +141,32 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv('FILE_UPLOAD_MAX_MEMORY_SIZE', '2500
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv('DATA_UPLOAD_MAX_MEMORY_SIZE', '25000000'))
 
 # ---------------------------------------------------------------------
+# DICOM Storage SCP / PACS import
+# ---------------------------------------------------------------------
+
+DICOM_INBOX_ROOT = Path(os.getenv("DICOM_INBOX_ROOT", BASE_DIR / "data" / "dicom_inbox"))
+if not DICOM_INBOX_ROOT.is_absolute():
+    DICOM_INBOX_ROOT = BASE_DIR / DICOM_INBOX_ROOT
+DICOM_INBOX_ROOT.mkdir(parents=True, exist_ok=True)
+
+DICOM_SCP_AE_TITLE = os.getenv("DICOM_SCP_AE_TITLE", "MOSAMATIC3")
+DICOM_SCP_HOST = os.getenv("DICOM_SCP_HOST", "0.0.0.0")
+DICOM_SCP_PORT = int(os.getenv("DICOM_SCP_PORT", "11112"))
+
+DICOM_IMPORT_STABLE_SECONDS = int(os.getenv("DICOM_IMPORT_STABLE_SECONDS", "60"))
+
+# The user who owns automatically created DICOM import sessions/datasets.
+DICOM_IMPORT_OWNER_USERNAME = os.getenv("DICOM_IMPORT_OWNER_USERNAME", ADMIN_USERNAME)
+
+# Manual-review mode by default. Later you can turn this on.
+DICOM_IMPORT_AUTO_RUN = env_bool("DICOM_IMPORT_AUTO_RUN", False)
+
+DICOM_IMPORT_PIPELINE_KEY = os.getenv(
+    "DICOM_IMPORT_PIPELINE_KEY",
+    "default_l3_from_pacs",
+)
+
+# ---------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------
 
