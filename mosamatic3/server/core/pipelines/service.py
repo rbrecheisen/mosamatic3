@@ -8,8 +8,20 @@ from config.celery_app import app as celery_app
 from core.models import Dataset, PipelineRun, PipelineStepRun
 from core.tasking.registry import TASKS
 from core.tasking.services import validate_task_parameters
-from core.dicomimport.services import update_dicom_import_status_from_pipeline_run
+# from core.dicomimport.services import update_dicom_import_status_from_pipeline_run
 from .configloader import load_pipeline_config, list_pipeline_configs
+
+
+def sync_dicom_import_status_if_needed(pipeline_run: PipelineRun) -> None:
+    """
+    Avoid a module-level import to prevent circular imports:
+
+    core.dicomimport.services -> core.pipelines.service
+    core.pipelines.service -> core.dicomimport.services
+    """
+    from core.dicomimport.services import update_dicom_import_status_from_pipeline_run
+
+    update_dicom_import_status_from_pipeline_run(pipeline_run)
 
 
 def get_pipeline_run_or_404(pipeline_run_id, user) -> PipelineRun:
@@ -169,7 +181,7 @@ def cancel_pipeline_run(pipeline_run_id, user) -> PipelineRun:
         ]
     )
 
-    update_dicom_import_status_from_pipeline_run(pipeline_run)
+    sync_dicom_import_status_if_needed(pipeline_run)
 
     running_step = pipeline_run.step_runs.filter(
         status=PipelineStepRun.STATUS_RUNNING,

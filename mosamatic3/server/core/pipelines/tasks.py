@@ -12,6 +12,18 @@ from core.dicomimport.services import update_dicom_import_status_from_pipeline_r
 from .resolver import resolve_dataset_reference, extract_first_output_dataset_id
 
 
+def sync_dicom_import_status_if_needed(pipeline_run: PipelineRun) -> None:
+    """
+    Avoid a module-level import to prevent circular imports:
+
+    core.dicomimport.services -> core.pipelines.service
+    core.pipelines.service -> core.dicomimport.services
+    """
+    from core.dicomimport.services import update_dicom_import_status_from_pipeline_run
+
+    update_dicom_import_status_from_pipeline_run(pipeline_run)
+
+
 @app.task(bind=True, name="core.pipelines.tasks.run_pipeline")
 def run_pipeline(self, pipeline_run_id: str) -> dict:
     pipeline_run = PipelineRun.objects.get(id=pipeline_run_id)
@@ -19,7 +31,7 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
     pipeline_run.status = PipelineRun.STATUS_RUNNING
     pipeline_run.started_at = timezone.now()
     pipeline_run.save(update_fields=["status", "started_at"])
-    update_dicom_import_status_from_pipeline_run(pipeline_run)
+    sync_dicom_import_status_if_needed(pipeline_run)
 
     context = {
         "initial_dataset": str(pipeline_run.initial_dataset_id),
@@ -153,7 +165,7 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
         pipeline_run.status = PipelineRun.STATUS_SUCCESS
         pipeline_run.finished_at = timezone.now()
         pipeline_run.save(update_fields=["status", "finished_at"])
-        update_dicom_import_status_from_pipeline_run(pipeline_run)
+        sync_dicom_import_status_if_needed(pipeline_run)
 
         return {
             "status": "SUCCESS",
@@ -165,7 +177,7 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
         pipeline_run.status = PipelineRun.STATUS_CANCELED
         pipeline_run.finished_at = timezone.now()
         pipeline_run.save(update_fields=["status", "finished_at"])
-        update_dicom_import_status_from_pipeline_run(pipeline_run)
+        sync_dicom_import_status_if_needed(pipeline_run)
         raise
 
     except Exception as exc:
@@ -173,5 +185,5 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
         pipeline_run.error_message = str(exc)
         pipeline_run.finished_at = timezone.now()
         pipeline_run.save(update_fields=["status", "error_message", "finished_at"])
-        update_dicom_import_status_from_pipeline_run(pipeline_run)
+        sync_dicom_import_status_if_needed(pipeline_run)
         raise
