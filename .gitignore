@@ -10,6 +10,10 @@ mosamatic3/server/logs/*
 !mosamatic3/server/data/logs/.gitkeep
 *.db
 
+.env
+*.env
+!.env.example
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

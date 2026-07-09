@@ -16,4 +16,8 @@ app.conf.update(
     timezone='UTC',
     enable_utc=True,
 )
-app.autodiscover_tasks(['core.processing', 'core.pipelines'])
+app.autodiscover_tasks([
+    'core.processing',
+    'core.pipelines',
+    'core.dicomimport',
+])

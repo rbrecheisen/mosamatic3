@@ -8,6 +8,7 @@ from core.models import Dataset, PipelineRun, PipelineStepRun
 from core.tasking.registry import TASKS
 from core.tasking.services import validate_task_parameters
 from core.tasking.taskrunservice import create_task_run
+from core.dicomimport.services import update_dicom_import_status_from_pipeline_run
 from .resolver import resolve_dataset_reference, extract_first_output_dataset_id
 
 
@@ -18,6 +19,7 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
     pipeline_run.status = PipelineRun.STATUS_RUNNING
     pipeline_run.started_at = timezone.now()
     pipeline_run.save(update_fields=["status", "started_at"])
+    update_dicom_import_status_from_pipeline_run(pipeline_run)
 
     context = {
         "initial_dataset": str(pipeline_run.initial_dataset_id),
@@ -149,9 +151,9 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
             }
 
         pipeline_run.status = PipelineRun.STATUS_SUCCESS
-        pipeline_run.current_step_id = None
         pipeline_run.finished_at = timezone.now()
-        pipeline_run.save(update_fields=["status", "current_step_id", "finished_at"])
+        pipeline_run.save(update_fields=["status", "finished_at"])
+        update_dicom_import_status_from_pipeline_run(pipeline_run)
 
         return {
             "status": "SUCCESS",
@@ -163,6 +165,7 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
         pipeline_run.status = PipelineRun.STATUS_CANCELED
         pipeline_run.finished_at = timezone.now()
         pipeline_run.save(update_fields=["status", "finished_at"])
+        update_dicom_import_status_from_pipeline_run(pipeline_run)
         raise
 
     except Exception as exc:
@@ -170,4 +173,5 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
         pipeline_run.error_message = str(exc)
         pipeline_run.finished_at = timezone.now()
         pipeline_run.save(update_fields=["status", "error_message", "finished_at"])
+        update_dicom_import_status_from_pipeline_run(pipeline_run)
         raise

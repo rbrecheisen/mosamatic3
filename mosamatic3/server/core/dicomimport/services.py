@@ -2,10 +2,9 @@ import logging
 import shutil
 from pathlib import Path
 
-import pydicom
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -175,27 +174,17 @@ def store_incoming_dicom_dataset(
         ds.save_as(str(target_path), write_like_original=False)
         size_bytes = target_path.stat().st_size
 
-        try:
-            DicomImportFile.objects.create(
-                session=session,
-                sop_instance_uid=sop_uid,
-                relative_path=relative_path,
-                size_bytes=size_bytes,
-                instance_number=_get_int(getattr(ds, "InstanceNumber", None)),
-                image_position_patient_z=_get_float_z(ds),
-            )
-        except IntegrityError:
-            # Same SOP sent twice. Keep the latest file on disk, update metadata.
-            DicomImportFile.objects.filter(
-                session=session,
-                sop_instance_uid=sop_uid,
-            ).update(
-                relative_path=relative_path,
-                size_bytes=size_bytes,
-                instance_number=_get_int(getattr(ds, "InstanceNumber", None)),
-                image_position_patient_z=_get_float_z(ds),
-                received_at=timezone.now(),
-            )
+        DicomImportFile.objects.update_or_create(
+            session=session,
+            sop_instance_uid=sop_uid,
+            defaults={
+                "relative_path": relative_path,
+                "size_bytes": size_bytes,
+                "instance_number": _get_int(getattr(ds, "InstanceNumber", None)),
+                "image_position_patient_z": _get_float_z(ds),
+                "received_at": timezone.now(),
+            },
+        )
 
         file_qs = session.files.all()
         session.file_count = file_qs.count()
@@ -397,3 +386,35 @@ def delete_import_session(session: DicomImportSession) -> None:
 
     session.delete()
     shutil.rmtree(root, ignore_errors=True)
+
+
+def update_dicom_import_status_from_pipeline_run(pipeline_run) -> None:
+    """
+    Keep linked DICOM import session status in sync with the final pipeline status.
+    """
+
+    from core.models import DicomImportSession, PipelineRun
+
+    session = DicomImportSession.objects.filter(
+        pipeline_run=pipeline_run,
+    ).first()
+
+    if session is None:
+        return
+
+    if pipeline_run.status == PipelineRun.STATUS_SUCCESS:
+        session.status = DicomImportSession.STATUS_DONE
+        session.error_message = ""
+    elif pipeline_run.status == PipelineRun.STATUS_FAILURE:
+        session.status = DicomImportSession.STATUS_FAILED
+        session.error_message = pipeline_run.error_message or "Pipeline failed."
+    elif pipeline_run.status == PipelineRun.STATUS_CANCELED:
+        session.status = DicomImportSession.STATUS_FAILED
+        session.error_message = "Pipeline was canceled."
+    elif pipeline_run.status == PipelineRun.STATUS_RUNNING:
+        session.status = DicomImportSession.STATUS_PROCESSING
+    else:
+        return
+
+    session.updated_at = timezone.now()
+    session.save(update_fields=["status", "error_message", "updated_at"])

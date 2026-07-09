@@ -25,6 +25,7 @@ env/
 # Local env/secrets
 .env
 *.env
+!.env.example
 *.secret
 secrets/
 admin_password.txt

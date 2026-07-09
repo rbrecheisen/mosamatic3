@@ -8,6 +8,7 @@ from config.celery_app import app as celery_app
 from core.models import Dataset, PipelineRun, PipelineStepRun
 from core.tasking.registry import TASKS
 from core.tasking.services import validate_task_parameters
+from core.dicomimport.services import update_dicom_import_status_from_pipeline_run
 from .configloader import load_pipeline_config, list_pipeline_configs
 
 
@@ -167,6 +168,8 @@ def cancel_pipeline_run(pipeline_run_id, user) -> PipelineRun:
             "finished_at",
         ]
     )
+
+    update_dicom_import_status_from_pipeline_run(pipeline_run)
 
     running_step = pipeline_run.step_runs.filter(
         status=PipelineStepRun.STATUS_RUNNING,

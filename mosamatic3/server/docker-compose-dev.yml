@@ -10,35 +10,31 @@ services:
   web:
     build: .
     container_name: mosamatic3-django-web
-    environment:
-      SECRET_KEY: change-me-in-production
-      DEBUG: "0"
-      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
-      CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
-      USE_X_FORWARDED_HOST: "1"
-      SECURE_PROXY_SSL_HEADER: "0"
-      DATABASE_URL: sqlite:////data/app.db
-      UPLOAD_ROOT: /data/uploads
-      STATIC_ROOT: /staticfiles
-      ADMIN_USERNAME: admin
-      # ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
-      ADMIN_PASSWORD: admin
-      LOG_DIR: /data/logs
-      LOG_LEVEL: INFO
-      LOG_MAX_BYTES: "10485760"
-      LOG_BACKUP_COUNT: "5"
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      GUNICORN_WORKERS: "3"
-      GUNICORN_TIMEOUT: "120"
-      DICOM_INBOX_ROOT: /data/dicom_inbox
-      DICOM_SCP_AE_TITLE: MOSAMATIC3
-      DICOM_SCP_HOST: 0.0.0.0
-      DICOM_SCP_PORT: "11112"
-      DICOM_IMPORT_OWNER_USERNAME: admin
-      DICOM_IMPORT_STABLE_SECONDS: "60"
-      DICOM_IMPORT_AUTO_RUN: "0"
-      DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
+    env_file:
+      .env
+    # environment:
+    #   SECRET_KEY: change-me-in-production
+    #   DEBUG: "0"
+    #   ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+    #   DATABASE_URL: sqlite:////data/app.db
+    #   UPLOAD_ROOT: /data/uploads
+    #   STATIC_ROOT: /staticfiles
+    #   ADMIN_USERNAME: admin
+    #   ADMIN_PASSWORD: admin
+    #   LOG_DIR: /data/logs
+    #   LOG_LEVEL: INFO
+    #   LOG_MAX_BYTES: "10485760"
+    #   LOG_BACKUP_COUNT: "5"
+    #   CELERY_BROKER_URL: redis://redis:6379/0
+    #   CELERY_RESULT_BACKEND: redis://redis:6379/0
+    #   DICOM_INBOX_ROOT: /data/dicom_inbox
+    #   DICOM_SCP_AE_TITLE: MOSAMATIC3
+    #   DICOM_SCP_HOST: 0.0.0.0
+    #   DICOM_SCP_PORT: "11112"
+    #   DICOM_IMPORT_OWNER_USERNAME: admin
+    #   DICOM_IMPORT_STABLE_SECONDS: "60"
+    #   DICOM_IMPORT_AUTO_RUN: "0"
+    #   DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
@@ -51,38 +47,37 @@ services:
   pipeline-worker:
     build: .
     container_name: mosamatic3-django-pipeline-worker
+    env_file:
+      .env
     environment:
-      SECRET_KEY: change-me-in-production
-      DEBUG: "0"
-      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
-      DATABASE_URL: sqlite:////data/app.db
-      UPLOAD_ROOT: /data/uploads
-      STATIC_ROOT: /staticfiles
-      ADMIN_USERNAME: admin
-      # ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
-      ADMIN_PASSWORD: admin
-      LOG_DIR: /data/logs
-      LOG_LEVEL: INFO
-      LOG_MAX_BYTES: "10485760"
-      LOG_BACKUP_COUNT: "5"
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      CELERY_LOGLEVEL: info
-      CELERY_POOL: solo
       CELERY_QUEUE: pipeline
-      CELERY_WORKER_NAME: pipeline
-      DICOM_INBOX_ROOT: /data/dicom_inbox
-      DICOM_SCP_AE_TITLE: MOSAMATIC3
-      DICOM_SCP_HOST: 0.0.0.0
-      DICOM_SCP_PORT: "11112"
-      DICOM_IMPORT_OWNER_USERNAME: admin
-      DICOM_IMPORT_STABLE_SECONDS: "60"
-      DICOM_IMPORT_AUTO_RUN: "0"
-      DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
+      CELERY_WORKER_NAME: pipeline-worker
+    # environment:
+    #   SECRET_KEY: change-me-in-production
+    #   DEBUG: "0"
+    #   ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+    #   DATABASE_URL: sqlite:////data/app.db
+    #   UPLOAD_ROOT: /data/uploads
+    #   STATIC_ROOT: /staticfiles
+    #   ADMIN_USERNAME: admin
+    #   ADMIN_PASSWORD: admin
+    #   LOG_DIR: /data/logs
+    #   LOG_LEVEL: INFO
+    #   LOG_MAX_BYTES: "10485760"
+    #   LOG_BACKUP_COUNT: "5"
+    #   CELERY_BROKER_URL: redis://redis:6379/0
+    #   CELERY_RESULT_BACKEND: redis://redis:6379/0
+    #   DICOM_INBOX_ROOT: /data/dicom_inbox
+    #   DICOM_SCP_AE_TITLE: MOSAMATIC3
+    #   DICOM_SCP_HOST: 0.0.0.0
+    #   DICOM_SCP_PORT: "11112"
+    #   DICOM_IMPORT_OWNER_USERNAME: admin
+    #   DICOM_IMPORT_STABLE_SECONDS: "60"
+    #   DICOM_IMPORT_AUTO_RUN: "0"
+    #   DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
-      # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     command: ["/app/docker/entrypoint-worker.sh"]
     depends_on:
       - redis
@@ -90,68 +85,69 @@ services:
   task-worker:
     build: .
     container_name: mosamatic3-django-task-worker
+    env_file:
+      .env
     environment:
-      SECRET_KEY: change-me-in-production
-      DEBUG: "0"
-      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
-      DATABASE_URL: sqlite:////data/app.db
-      UPLOAD_ROOT: /data/uploads
-      STATIC_ROOT: /staticfiles
-      ADMIN_USERNAME: admin
-      # ADMIN_PASSWORD_FILE: /run/secrets/admin_password.txt
-      ADMIN_PASSWORD: admin
-      LOG_DIR: /data/logs
-      LOG_LEVEL: INFO
-      LOG_MAX_BYTES: "10485760"
-      LOG_BACKUP_COUNT: "5"
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      CELERY_LOGLEVEL: info
-      CELERY_POOL: solo
       CELERY_QUEUE: tasks
-      CELERY_WORKER_NAME: tasks
-      DICOM_INBOX_ROOT: /data/dicom_inbox
-      DICOM_SCP_AE_TITLE: MOSAMATIC3
-      DICOM_SCP_HOST: 0.0.0.0
-      DICOM_SCP_PORT: "11112"
-      DICOM_IMPORT_OWNER_USERNAME: admin
-      DICOM_IMPORT_STABLE_SECONDS: "60"
-      DICOM_IMPORT_AUTO_RUN: "0"
-      DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
+      CELERY_WORKER_NAME: task-worker
+    # environment:
+    #   SECRET_KEY: change-me-in-production
+    #   DEBUG: "0"
+    #   ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+    #   DATABASE_URL: sqlite:////data/app.db
+    #   UPLOAD_ROOT: /data/uploads
+    #   STATIC_ROOT: /staticfiles
+    #   ADMIN_USERNAME: admin
+    #   ADMIN_PASSWORD: admin
+    #   LOG_DIR: /data/logs
+    #   LOG_LEVEL: INFO
+    #   LOG_MAX_BYTES: "10485760"
+    #   LOG_BACKUP_COUNT: "5"
+    #   CELERY_BROKER_URL: redis://redis:6379/0
+    #   CELERY_RESULT_BACKEND: redis://redis:6379/0
+    #   DICOM_INBOX_ROOT: /data/dicom_inbox
+    #   DICOM_SCP_AE_TITLE: MOSAMATIC3
+    #   DICOM_SCP_HOST: 0.0.0.0
+    #   DICOM_SCP_PORT: "11112"
+    #   DICOM_IMPORT_OWNER_USERNAME: admin
+    #   DICOM_IMPORT_STABLE_SECONDS: "60"
+    #   DICOM_IMPORT_AUTO_RUN: "0"
+    #   DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
-      # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     command: ["/app/docker/entrypoint-worker.sh"]
     depends_on:
       - redis
 
   dicom-scp:
-    image: brecheisen/mosamatic3:latest
+    build: .
     container_name: mosamatic3-django-dicom-scp
-    environment:
-      SECRET_KEY: change-me-in-production
-      DEBUG: "0"
-      ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
-      DATABASE_URL: sqlite:////data/app.db
-      UPLOAD_ROOT: /data/uploads
-      STATIC_ROOT: /staticfiles
-      ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: admin
-      LOG_DIR: /data/logs
-      LOG_LEVEL: INFO
-      LOG_MAX_BYTES: "10485760"
-      LOG_BACKUP_COUNT: "5"
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      DICOM_INBOX_ROOT: /data/dicom_inbox
-      DICOM_SCP_AE_TITLE: MOSAMATIC3
-      DICOM_SCP_HOST: 0.0.0.0
-      DICOM_SCP_PORT: "11112"
-      DICOM_IMPORT_OWNER_USERNAME: admin
-      DICOM_IMPORT_STABLE_SECONDS: "60"
-      DICOM_IMPORT_AUTO_RUN: "0"
-      DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
+    env_file:
+      .env
+    # environment:
+    #   SECRET_KEY: change-me-in-production
+    #   DEBUG: "0"
+    #   ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+    #   DATABASE_URL: sqlite:////data/app.db
+    #   UPLOAD_ROOT: /data/uploads
+    #   STATIC_ROOT: /staticfiles
+    #   ADMIN_USERNAME: admin
+    #   ADMIN_PASSWORD: admin
+    #   LOG_DIR: /data/logs
+    #   LOG_LEVEL: INFO
+    #   LOG_MAX_BYTES: "10485760"
+    #   LOG_BACKUP_COUNT: "5"
+    #   CELERY_BROKER_URL: redis://redis:6379/0
+    #   CELERY_RESULT_BACKEND: redis://redis:6379/0
+    #   DICOM_INBOX_ROOT: /data/dicom_inbox
+    #   DICOM_SCP_AE_TITLE: MOSAMATIC3
+    #   DICOM_SCP_HOST: 0.0.0.0
+    #   DICOM_SCP_PORT: "11112"
+    #   DICOM_IMPORT_OWNER_USERNAME: admin
+    #   DICOM_IMPORT_STABLE_SECONDS: "60"
+    #   DICOM_IMPORT_AUTO_RUN: "0"
+    #   DICOM_IMPORT_PIPELINE_KEY: default_l3_from_pacs
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
