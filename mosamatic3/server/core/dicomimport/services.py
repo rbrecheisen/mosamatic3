@@ -375,6 +375,37 @@ def start_l3_pipeline_for_import(session: DicomImportSession):
     return pipeline_run
 
 
+def delete_all_import_sessions(user) -> int:
+    """
+    Delete all DICOM import sessions for this user and remove their inbox folders.
+
+    This only deletes the DICOM import inbox records/files. It does not delete
+    datasets or pipeline runs that may already have been created from an import.
+    """
+
+    sessions = list(
+        DicomImportSession.objects
+        .filter(owner=user)
+        .select_related("dataset", "pipeline_run")
+    )
+
+    deleted_count = 0
+
+    for session in sessions:
+        root = dicom_inbox_session_root(session)
+
+        session.status = DicomImportSession.STATUS_DELETED
+        session.updated_at = timezone.now()
+        session.save(update_fields=["status", "updated_at"])
+
+        session.delete()
+        shutil.rmtree(root, ignore_errors=True)
+
+        deleted_count += 1
+
+    return deleted_count
+
+
 def delete_import_session(session: DicomImportSession) -> None:
     if session.pipeline_run_id:
         raise ValidationError("Cannot delete a DICOM import that has a pipeline run.")

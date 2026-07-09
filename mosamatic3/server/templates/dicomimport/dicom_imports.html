@@ -8,7 +8,21 @@
       <h2>DICOM imports</h2>
       <p class="muted">
         Review CT series received via DICOM Storage Push before creating datasets or running the L3 body composition pipeline.
+        This page refreshes every 5 seconds while it is open.
       </p>
+    </div>
+
+    <div class="button-row">
+      {% if sessions %}
+        <form
+          method="post"
+          action="{% url 'dicom_import_delete_all' %}"
+          onsubmit="return confirm('Delete all DICOM imports? This removes the DICOM import inbox files, but not datasets or pipeline runs that were already created.');"
+        >
+          {% csrf_token %}
+          <button class="link-button danger-link" type="submit">Delete all</button>
+        </form>
+      {% endif %}
     </div>
   </div>
 
@@ -69,4 +83,9 @@
     <p class="muted">No DICOM imports received yet.</p>
   {% endif %}
 </section>
+<script>
+  window.setTimeout(function () {
+    window.location.reload();
+  }, 5000);
+</script>
 {% endblock %}

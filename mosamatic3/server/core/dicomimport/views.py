@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from core.models import DicomImportSession
 from .services import (
     create_dataset_from_import_session,
+    delete_all_import_sessions,
     delete_import_session,
     mark_stable_imports_ready,
     start_l3_pipeline_for_import,
@@ -111,3 +112,18 @@ def delete_import_view(request, session_id):
     except Exception as exc:
         messages.error(request, f"Could not delete DICOM import: {exc}")
         return redirect("dicom_import_detail", session_id=session.id)
+    
+
+@login_required
+@require_POST
+def delete_all_imports_view(request):
+    try:
+        deleted_count = delete_all_import_sessions(request.user)
+        messages.success(
+            request,
+            f"Deleted {deleted_count} DICOM import{'s' if deleted_count != 1 else ''}.",
+        )
+    except Exception as exc:
+        messages.error(request, f"Could not delete all DICOM imports: {exc}")
+
+    return redirect("dicom_imports")

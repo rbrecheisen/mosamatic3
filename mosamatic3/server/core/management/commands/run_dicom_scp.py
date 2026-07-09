@@ -4,11 +4,39 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from pynetdicom import AE, evt
 from pynetdicom.sop_class import CTImageStorage
-
+from pydicom.uid import (
+    ExplicitVRLittleEndian,
+    ImplicitVRLittleEndian,
+    ExplicitVRBigEndian,
+    JPEGBaseline8Bit,
+    JPEGExtended12Bit,
+    JPEGLossless,
+    JPEGLSLossless,
+    JPEGLSNearLossless,
+    JPEG2000Lossless,
+    JPEG2000,
+    RLELossless,
+)
 from core.dicomimport.services import store_incoming_dicom_dataset
 from core.dicomimport.tasks import finalize_import_if_stable
 
 logger = logging.getLogger(__name__)
+
+CT_TRANSFER_SYNTAXES = [
+    ExplicitVRLittleEndian,
+    ImplicitVRLittleEndian,
+    ExplicitVRBigEndian,
+
+    # Common compressed CT transfer syntaxes.
+    JPEGBaseline8Bit,
+    JPEGExtended12Bit,
+    JPEGLossless,
+    JPEGLSLossless,
+    JPEGLSNearLossless,
+    JPEG2000Lossless,
+    JPEG2000,
+    RLELossless,
+]
 
 
 def _ae_title_to_str(value) -> str:
@@ -57,8 +85,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         ae = AE(ae_title=settings.DICOM_SCP_AE_TITLE)
 
-        # Start with CT only. This keeps the first implementation safe.
-        ae.add_supported_context(CTImageStorage)
+        # CT only, but accept common uncompressed and compressed CT transfer syntaxes.
+        for transfer_syntax in CT_TRANSFER_SYNTAXES:
+            ae.add_supported_context(CTImageStorage, [transfer_syntax])
 
         handlers = [
             (evt.EVT_C_STORE, handle_store),
@@ -70,6 +99,10 @@ class Command(BaseCommand):
                 f"on {settings.DICOM_SCP_HOST}:{settings.DICOM_SCP_PORT}"
             )
         )
+
+        ae.network_timeout = 300
+        ae.acse_timeout = 60
+        ae.dimse_timeout = 300
 
         ae.start_server(
             (settings.DICOM_SCP_HOST, settings.DICOM_SCP_PORT),

@@ -14,6 +14,25 @@ from pynetdicom.sop_class import CTImageStorage
 logger = logging.getLogger("send_dicom_folder")
 
 
+# Use UID strings instead of importing transfer syntax constants.
+# This is robust across pynetdicom/pydicom versions.
+CT_TRANSFER_SYNTAXES = [
+    "1.2.840.10008.1.2.1",       # Explicit VR Little Endian
+    "1.2.840.10008.1.2",         # Implicit VR Little Endian
+    "1.2.840.10008.1.2.2",       # Explicit VR Big Endian
+
+    "1.2.840.10008.1.2.4.50",    # JPEG Baseline 8-bit
+    "1.2.840.10008.1.2.4.51",    # JPEG Extended 12-bit
+    "1.2.840.10008.1.2.4.57",    # JPEG Lossless
+    "1.2.840.10008.1.2.4.70",    # JPEG Lossless SV1
+    "1.2.840.10008.1.2.4.80",    # JPEG-LS Lossless
+    "1.2.840.10008.1.2.4.81",    # JPEG-LS Near Lossless
+    "1.2.840.10008.1.2.4.90",    # JPEG 2000 Lossless
+    "1.2.840.10008.1.2.4.91",    # JPEG 2000
+    "1.2.840.10008.1.2.5",       # RLE Lossless
+]
+
+
 def setup_logging(log_dir: Path, verbose: bool) -> Path:
     log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -42,31 +61,15 @@ def setup_logging(log_dir: Path, verbose: bool) -> Path:
     return log_path
 
 
-def is_dicom_file(path: Path) -> bool:
-    if not path.is_file():
-        return False
+def collect_candidate_files(folder: Path) -> list[Path]:
+    """
+    Fast recursive file collection.
 
-    try:
-        pydicom.dcmread(str(path), stop_before_pixels=True, force=True)
-        return True
-    except Exception:
-        return False
-
-
-def collect_dicom_files(folder: Path) -> list[Path]:
-    return sorted(
-        path
-        for path in folder.rglob("*")
-        if is_dicom_file(path)
-    )
-
-
-def collect_dicom_files_quickly(folder: Path) -> list[Path]:
-    return sorted(
-        path
-        for path in folder.rglob("*")
-        if path.is_file()
-    )
+    We intentionally do not pre-read every file here, because that doubles
+    the amount of DICOM parsing and makes large sends slow. Files are checked
+    inside the send loop.
+    """
+    return sorted(path for path in folder.rglob("*") if path.is_file())
 
 
 def get_value(ds, name: str, default: str = "") -> str:
@@ -74,6 +77,14 @@ def get_value(ds, name: str, default: str = "") -> str:
     if value is None:
         return default
     return str(value)
+
+
+def get_transfer_syntax(ds) -> str:
+    file_meta = getattr(ds, "file_meta", None)
+    if file_meta is None:
+        return "unknown"
+
+    return str(getattr(file_meta, "TransferSyntaxUID", "unknown"))
 
 
 def main() -> int:
@@ -120,9 +131,16 @@ def main() -> int:
     )
 
     parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Only send the first N candidate files. Useful for testing.",
+    )
+
+    parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Print more detailed DICOM metadata to the console.",
+        help="Print detailed DICOM metadata to the console.",
     )
 
     args = parser.parse_args()
@@ -146,19 +164,31 @@ def main() -> int:
         logger.error("Folder does not exist or is not a directory: %s", folder)
         return 1
 
-    logger.info("Scanning folder recursively for DICOM files...")
-    files = collect_dicom_files_quickly(folder)
+    logger.info("Scanning folder recursively for candidate files...")
+    files = collect_candidate_files(folder)
+
+    if args.limit is not None:
+        files = files[:args.limit]
+        logger.info("Limiting send to first %s candidate files.", args.limit)
 
     if not files:
-        logger.error("No readable DICOM files found in: %s", folder)
+        logger.error("No candidate files found in: %s", folder)
         return 1
 
-    logger.info("Found %s readable DICOM files.", len(files))
+    logger.info("Found %s candidate files.", len(files))
 
     ae = AE(ae_title=args.calling_ae)
 
-    # First implementation matches Mosamatic3 SCP: CT only.
-    ae.add_requested_context(CTImageStorage)
+    # Request one presentation context per transfer syntax.
+    # A DICOM peer accepts only one transfer syntax per presentation context,
+    # so this is needed when sending a mixed folder with uncompressed + JPEG2000 CT files.
+    for transfer_syntax in CT_TRANSFER_SYNTAXES:
+        ae.add_requested_context(CTImageStorage, [transfer_syntax])
+
+    # Be more tolerant for large sends.
+    ae.acse_timeout = 60
+    ae.dimse_timeout = 300
+    ae.network_timeout = 300
 
     logger.info("Opening DICOM association...")
     assoc = ae.associate(
@@ -169,6 +199,22 @@ def main() -> int:
 
     if not assoc.is_established:
         logger.error("Could not establish DICOM association.")
+
+        if assoc.is_rejected:
+            logger.error(
+                "Association rejected | result=%s | source=%s | reason=%s",
+                assoc.acceptor.result,
+                assoc.acceptor.result_source,
+                assoc.acceptor.diagnostic,
+            )
+        elif assoc.is_aborted:
+            logger.error("Association aborted.")
+        else:
+            logger.error(
+                "No association established. Most likely: SCP not running, wrong port, "
+                "wrong AE title, firewall, or unsupported presentation context."
+            )
+
         return 2
 
     logger.info("DICOM association established.")
@@ -181,22 +227,52 @@ def main() -> int:
 
     try:
         for index, path in enumerate(files, start=1):
+            # Always initialize these before any DICOM read.
+            # That keeps exception logging safe even when dcmread fails.
+            patient_id = "unknown"
+            patient_name = ""
+            study_uid = "unknown"
+            series_uid = "unknown"
+            sop_uid = "unknown"
+            study_description = ""
+            series_description = ""
+            instance_number = ""
+            rows = ""
+            columns = ""
+            transfer_syntax = "unknown"
+
             try:
-                ds = pydicom.dcmread(str(path), force=True)
+                # First read metadata only. This is faster and avoids loading pixel data
+                # just to decide whether this is a CT image.
+                try:
+                    meta_ds = pydicom.dcmread(
+                        str(path),
+                        stop_before_pixels=True,
+                        force=True,
+                    )
+                except Exception as exc:
+                    logger.exception(
+                        "[%s/%s] SKIP unreadable DICOM metadata | File=%s | %s",
+                        index,
+                        len(files),
+                        path,
+                        exc,
+                    )
+                    skipped += 1
+                    continue
 
-                modality = get_value(ds, "Modality").upper()
-                patient_id = get_value(ds, "PatientID", "unknown")
-                patient_name = get_value(ds, "PatientName", "")
-                study_uid = get_value(ds, "StudyInstanceUID", "unknown")
-                series_uid = get_value(ds, "SeriesInstanceUID", "unknown")
-                sop_uid = get_value(ds, "SOPInstanceUID", "unknown")
-                study_description = get_value(ds, "StudyDescription", "")
-                series_description = get_value(ds, "SeriesDescription", "")
-                instance_number = get_value(ds, "InstanceNumber", "")
-                rows = get_value(ds, "Rows", "")
-                columns = get_value(ds, "Columns", "")
-
-                seen_series[series_uid] = seen_series.get(series_uid, 0) + 1
+                modality = get_value(meta_ds, "Modality").upper()
+                patient_id = get_value(meta_ds, "PatientID", "unknown")
+                patient_name = get_value(meta_ds, "PatientName", "")
+                study_uid = get_value(meta_ds, "StudyInstanceUID", "unknown")
+                series_uid = get_value(meta_ds, "SeriesInstanceUID", "unknown")
+                sop_uid = get_value(meta_ds, "SOPInstanceUID", "unknown")
+                study_description = get_value(meta_ds, "StudyDescription", "")
+                series_description = get_value(meta_ds, "SeriesDescription", "")
+                instance_number = get_value(meta_ds, "InstanceNumber", "")
+                rows = get_value(meta_ds, "Rows", "")
+                columns = get_value(meta_ds, "Columns", "")
+                transfer_syntax = get_transfer_syntax(meta_ds)
 
                 if modality != "CT":
                     logger.info(
@@ -209,10 +285,52 @@ def main() -> int:
                     skipped += 1
                     continue
 
+                # Now read the full dataset for C-STORE.
+                try:
+                    ds = pydicom.dcmread(str(path), force=True)
+                except Exception as exc:
+                    logger.exception(
+                        "[%s/%s] SKIP unreadable full DICOM | PatientID=%s | Series=%s | SOP=%s | File=%s | %s",
+                        index,
+                        len(files),
+                        patient_id,
+                        series_uid,
+                        sop_uid,
+                        path,
+                        exc,
+                    )
+                    skipped += 1
+                    continue
+
+                # Refresh values from the full dataset, in case metadata read differed.
+                modality = get_value(ds, "Modality").upper()
+                patient_id = get_value(ds, "PatientID", patient_id)
+                patient_name = get_value(ds, "PatientName", patient_name)
+                study_uid = get_value(ds, "StudyInstanceUID", study_uid)
+                series_uid = get_value(ds, "SeriesInstanceUID", series_uid)
+                sop_uid = get_value(ds, "SOPInstanceUID", sop_uid)
+                study_description = get_value(ds, "StudyDescription", study_description)
+                series_description = get_value(ds, "SeriesDescription", series_description)
+                instance_number = get_value(ds, "InstanceNumber", instance_number)
+                rows = get_value(ds, "Rows", rows)
+                columns = get_value(ds, "Columns", columns)
+                transfer_syntax = get_transfer_syntax(ds)
+
+                if modality != "CT":
+                    logger.info(
+                        "[%s/%s] SKIP non-CT after full read | Modality=%s | File=%s",
+                        index,
+                        len(files),
+                        modality or "unknown",
+                        path,
+                    )
+                    skipped += 1
+                    continue
+
                 logger.debug(
                     "[%s/%s] Sending file=%s | PatientID=%s | PatientName=%s | "
                     "StudyDescription=%s | SeriesDescription=%s | StudyUID=%s | "
-                    "SeriesUID=%s | SOPUID=%s | Instance=%s | Size=%sx%s",
+                    "SeriesUID=%s | SOPUID=%s | Instance=%s | Size=%sx%s | TransferSyntax=%s",
                     index,
                     len(files),
                     path,
@@ -226,7 +344,17 @@ def main() -> int:
                     instance_number,
                     rows,
                     columns,
+                    transfer_syntax,
                 )
+
+                if not assoc.is_established:
+                    logger.error(
+                        "[%s/%s] Association is no longer established. Stopping send loop.",
+                        index,
+                        len(files),
+                    )
+                    failed += 1
+                    break
 
                 status = assoc.send_c_store(ds)
 
@@ -241,10 +369,11 @@ def main() -> int:
                         sop_uid,
                     )
                     sent += 1
+                    seen_series[series_uid] = seen_series.get(series_uid, 0) + 1
                 else:
                     status_code = f"0x{status.Status:04X}" if status else "No status"
                     logger.error(
-                        "[%s/%s] FAIL %s | PatientID=%s | Series=%s | SOP=%s | File=%s",
+                        "[%s/%s] FAIL %s | PatientID=%s | Series=%s | SOP=%s | File=%s | TransferSyntax=%s",
                         index,
                         len(files),
                         status_code,
@@ -252,22 +381,30 @@ def main() -> int:
                         series_uid,
                         sop_uid,
                         path,
+                        transfer_syntax,
                     )
                     failed += 1
 
             except Exception as exc:
                 logger.exception(
-                    "[%s/%s] ERROR while sending file=%s | %s",
+                    "[%s/%s] ERROR while sending file=%s | PatientID=%s | Series=%s | SOP=%s | TransferSyntax=%s | %s",
                     index,
                     len(files),
                     path,
+                    patient_id,
+                    series_uid,
+                    sop_uid,
+                    transfer_syntax,
                     exc,
                 )
                 failed += 1
 
     finally:
         logger.info("Releasing DICOM association...")
-        assoc.release()
+        if assoc.is_established:
+            assoc.release()
+        else:
+            assoc.abort()
 
     logger.info("")
     logger.info("DICOM send finished.")
@@ -275,7 +412,7 @@ def main() -> int:
     logger.info("Skipped: %s", skipped)
     logger.info("Failed:  %s", failed)
 
-    logger.info("Detected series:")
+    logger.info("Detected sent series:")
     for series_uid, count in sorted(seen_series.items(), key=lambda item: item[0]):
         logger.info("  %s files | SeriesInstanceUID=%s", count, series_uid)
 

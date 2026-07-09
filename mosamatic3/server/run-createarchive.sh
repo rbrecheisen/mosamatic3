@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+set -e
+
 root="$HOME/Documents/Development/GitHub/mosamatic3/mosamatic3/server"
 zipFilePath="$root/_sources.zip"
 
@@ -7,6 +9,7 @@ itemsToInclude=(
   "config"
   "core"
   "docker"
+  "scripts"
   "nginx"
   "static"
   "templates"
@@ -32,6 +35,18 @@ cd "$root" || exit 1
 
 rm -f "$zipFilePath"
 
+# Build the ZIP from the project root so paths are preserved.
+# Exclude:
+# - built-in/system model datasets
+# - Python cache files
+# - existing generated ZIP
 zip -r "$zipFilePath" "${itemsToInclude[@]}" \
   -x "core/systemdatasets/*" \
-  -x "core/systemdatasets/**"
+  -x "*/__pycache__/*" \
+  -x "*.pyc" \
+  -x "_sources.zip"
+
+echo "Created ZIP: $zipFilePath"
+echo ""
+echo "First entries:"
+unzip -l "$zipFilePath" | head -n 40

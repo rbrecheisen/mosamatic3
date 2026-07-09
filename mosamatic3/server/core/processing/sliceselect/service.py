@@ -654,6 +654,23 @@ def run_slice_select_task(parameters: dict, user_id: str, celery_task=None) -> d
         completed_count = manifest.get('completed_count', 0)
         failed_count = manifest.get('failed_count', 0)
 
+        if completed_count == 0:
+            manifest['status'] = 'failed'
+            save_manifest(output_dataset, manifest)
+
+            output_dataset.status = 'failed'
+            output_dataset.save(update_fields=['status'])
+
+            message = f'Slice selection failed: no {params.vertebral_level} slice was selected from {total} candidate scan(s)'
+
+            runtime.update_progress(
+                current=total,
+                total=total,
+                message=message,
+            )
+
+            raise RuntimeError(message)
+
         if create_review_pngs and completed_count > 0:
             overview_png = sagittal_thumbnail_overview_png_bytes(
                 output_dataset=output_dataset,
