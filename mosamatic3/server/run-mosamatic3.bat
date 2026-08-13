@@ -23,5 +23,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '
 
 docker compose pull
 docker compose up -d
+docker compose logs -f
 
 pause
