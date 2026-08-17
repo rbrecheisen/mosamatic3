@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <div class="dataset-preview-header">
+    <div>
+      <h2>Docker Compose Logs</h2>
+      <p class="muted">Raw output captured by the Mosamatic3 launcher.</p>
+    </div>
+    <a class="button-like secondary" href="{% url 'data' %}">Back to Data</a>
+  </div>
+
+  {% if log_error %}
+    <p class="message error">{{ log_error }}</p>
+  {% else %}
+    <pre class="compose-log-output">{{ log_content }}</pre>
+  {% endif %}
+</section>
+{% endblock %}

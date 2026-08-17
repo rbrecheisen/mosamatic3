@@ -22,7 +22,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 echo "Creating install directory..."
-mkdir -p "$INSTALL_DIR/nginx"
+mkdir -p "$INSTALL_DIR/nginx" "$INSTALL_DIR/data/logs"
 cd "$INSTALL_DIR" || exit 1
 
 echo "Downloading docker-compose.yml..."
@@ -41,3 +41,5 @@ echo ""
 echo "Mosamatic3 is now running."
 echo "Open the app at:"
 echo "http://localhost:8000"
+
+docker compose logs -f --no-color 2>&1 | tee -a ./data/logs/docker-compose.log

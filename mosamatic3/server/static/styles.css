@@ -581,6 +581,23 @@ body {
   align-items: center;
 }
 
+.data-page-actions {
+  margin-bottom: 1rem;
+}
+
+.compose-log-output {
+  max-height: 75vh;
+  margin: 0;
+  overflow: auto;
+  white-space: pre;
+  border: 1px solid #e2e6f0;
+  border-radius: 12px;
+  background: #111827;
+  color: #e5e7eb;
+  padding: 1rem;
+  font: 0.85rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

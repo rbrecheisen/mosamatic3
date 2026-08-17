@@ -2,6 +2,7 @@ import json
 import mimetypes
 from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, render
@@ -83,6 +84,29 @@ def data_page(request):
             'input_datasets': input_datasets,
             'output_datasets': output_datasets,
             'output_empty_message': 'No output results yet. Run a task to generate output datasets.',
+        },
+    )
+
+
+@login_required
+def logs_page(request):
+    log_path = Path(settings.COMPOSE_LOG_PATH)
+    log_content = ''
+    log_error = ''
+
+    try:
+        log_content = log_path.read_text(encoding='utf-8', errors='replace')
+    except FileNotFoundError:
+        log_error = 'The Docker Compose log file does not exist yet.'
+    except OSError as exc:
+        log_error = f'The Docker Compose log file could not be read: {exc}'
+
+    return render(
+        request,
+        'datasets/logs.html',
+        {
+            'log_content': log_content,
+            'log_error': log_error,
         },
     )
 

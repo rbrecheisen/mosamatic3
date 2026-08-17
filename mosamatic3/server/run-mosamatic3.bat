@@ -14,6 +14,7 @@ if errorlevel 1 (
 
 mkdir "%INSTALL_DIR%" 2>nul
 mkdir "%INSTALL_DIR%\nginx" 2>nul
+mkdir "%INSTALL_DIR%\data\logs" 2>nul
 
 cd /d "%INSTALL_DIR%"
 
@@ -23,6 +24,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '
 
 docker compose pull
 docker compose up -d
-docker compose logs -f
+powershell -NoProfile -ExecutionPolicy Bypass -Command "docker compose logs -f --no-color 2>&1 | Tee-Object -FilePath '.\data\logs\docker-compose.log' -Append"
 
 pause

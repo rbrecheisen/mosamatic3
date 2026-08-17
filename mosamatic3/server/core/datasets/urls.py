@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('data/', views.data_page, name='data'),
+    path('data/logs/', views.logs_page, name='logs'),
     path('data/<uuid:dataset_id>/', views.dataset_detail_page, name='dataset_detail'),
     path(
         'data/<uuid:dataset_id>/files/<uuid:file_id>/',

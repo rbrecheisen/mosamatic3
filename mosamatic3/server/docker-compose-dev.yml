@@ -6,6 +6,7 @@ services:
     - "6379:6379"
     volumes:
       - redis_data:/data
+      - ./data/logs:/compose-logs:ro
 
   web:
     build: .
@@ -38,6 +39,7 @@ services:
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
+      - ./data/logs:/compose-logs:ro
       # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     expose:
       - "8000"
@@ -78,6 +80,7 @@ services:
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
+      - ./data/logs:/compose-logs:ro
     command: ["/app/docker/entrypoint-worker.sh"]
     depends_on:
       - redis
@@ -116,6 +119,7 @@ services:
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
+      - ./data/logs:/compose-logs:ro
     command: ["/app/docker/entrypoint-worker.sh"]
     depends_on:
       - redis
@@ -151,6 +155,7 @@ services:
     volumes:
       - server_data:/data
       - staticfiles:/staticfiles
+      - ./data/logs:/compose-logs:ro
     command: ["python", "manage.py", "run_dicom_scp"]
     ports:
       - "11112:11112"
@@ -166,6 +171,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - staticfiles:/staticfiles:ro
+      - ./data/logs:/compose-logs:ro
     depends_on:
       - web
 

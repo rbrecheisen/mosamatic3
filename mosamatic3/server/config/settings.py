@@ -175,6 +175,12 @@ if not LOG_DIR.is_absolute():
     LOG_DIR = BASE_DIR / LOG_DIR
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+COMPOSE_LOG_PATH = Path(
+    os.getenv("COMPOSE_LOG_PATH", "/compose-logs/docker-compose.log")
+)
+if not COMPOSE_LOG_PATH.is_absolute():
+    COMPOSE_LOG_PATH = BASE_DIR / COMPOSE_LOG_PATH
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", "10485760"))  # 10 MB
 LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
