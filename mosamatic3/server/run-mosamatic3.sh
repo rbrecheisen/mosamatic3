@@ -5,6 +5,7 @@ set -e
 INSTALL_DIR="$HOME/mosamatic3"
 COMPOSE_URL="https://raw.githubusercontent.com/rbrecheisen/mosamatic3/refs/heads/main/mosamatic3/server/docker-compose.yml"
 NGINX_CONF_URL="https://raw.githubusercontent.com/rbrecheisen/mosamatic3/refs/heads/main/mosamatic3/server/nginx/nginx.conf"
+ENV_FILE="https://raw.githubusercontent.com/rbrecheisen/mosamatic3/refs/heads/main/mosamatic3/server/.env.example"
 
 echo "Checking Docker..."
 
@@ -27,6 +28,9 @@ cd "$INSTALL_DIR" || exit 1
 
 echo "Downloading docker-compose.yml..."
 curl -L "$COMPOSE_URL" -o docker-compose.yml
+
+echo "Downloading .env file..."
+curl -L "$ENV_FILE" -o .env
 
 echo "Downloading nginx.conf..."
 curl -L "$NGINX_CONF_URL" -o nginx/nginx.conf
