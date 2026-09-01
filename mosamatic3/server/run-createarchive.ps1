@@ -1,4 +1,6 @@
-$root = "D:\SoftwareDevelopment\GitHub\mosamatic3\mosamatic3\server"
+$ErrorActionPreference = "Stop"
+
+$root = $PSScriptRoot
 $zipFilePath = Join-Path $root "_sources.zip"
 
 $itemsToInclude = @(
@@ -49,14 +51,17 @@ if (Test-Path $zipFilePath) {
   Remove-Item $zipFilePath -Force
 }
 
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$zip = [System.IO.Compression.ZipFile]::Open(
-  $zipFilePath,
-  [System.IO.Compression.ZipArchiveMode]::Create
-)
+$zip = $null
 
 try {
+  $zip = [System.IO.Compression.ZipFile]::Open(
+    $zipFilePath,
+    [System.IO.Compression.ZipArchiveMode]::Create
+  )
+
   foreach ($item in $itemsToInclude) {
     $fullPath = Join-Path $root $item
 
@@ -92,7 +97,9 @@ try {
   }
 }
 finally {
-  $zip.Dispose()
+  if ($null -ne $zip) {
+    $zip.Dispose()
+  }
 }
 
 Write-Host "Created ZIP: $zipFilePath"

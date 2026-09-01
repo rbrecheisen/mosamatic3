@@ -107,3 +107,7 @@ class CalculateScoresTaskParameters(BaseModel):
     title='Input path prefix',
     description='Optional subfolder/prefix inside the input dataset. Leave empty for root/all files.',
   )
+
+
+  class CollectSingleCTImagesTaskParameters(BaseModel):
+    input_dataset_id: UUID

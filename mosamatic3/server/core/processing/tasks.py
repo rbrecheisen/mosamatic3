@@ -9,6 +9,7 @@ from .rescaledicomimages.service import run_rescale_dicom_images_task
 from .sliceselect.service import run_slice_select_task
 from .segmentmusclefatl3.service import run_segment_muscle_fat_l3_tensorflow_task
 from .calculatescores.service import run_calculate_scores_task
+from .collectsinglectimages.service import run_collect_single_ct_images_task
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,24 @@ def run_calculatescorestask(self, parameters: dict, user_id: str) -> dict:
         parameters=parameters,
         user_id=user_id,
         func=run_calculate_scores_task,
+    )
+
+
+@app.task(
+    bind=True,
+    name="core.processing.tasks.run_collectsinglectimagestask",
+)
+def run_collectsinglectimagestask(
+    self,
+    parameters: dict,
+    user_id: str,
+) -> dict:
+    return run_logged_task(
+        celery_task=self,
+        task_name="collectsinglectimages",
+        parameters=parameters,
+        user_id=user_id,
+        func=run_collect_single_ct_images_task,
     )
 
 # from config.celery_app import app

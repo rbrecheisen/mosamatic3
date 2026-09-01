@@ -5,6 +5,7 @@ from .schemas import (
   SliceSelectTaskParameters,
   SegmentMuscleFatL3TensorFlowTaskParameters,
   CalculateScoresTaskParameters,
+  CollectSingleCTImagesTaskParameters,
 )
 
 TASKS = {
@@ -48,5 +49,17 @@ down in the patient folder.
     description='Calculates body-composition scores from DICOM images and muscle/fat segmentations',
     celery_task_name='core.processing.tasks.run_calculatescorestask',
     parameter_schema=CalculateScoresTaskParameters,
+  ),
+  'collectsinglectimages': TaskDefinition(
+    key="collectsinglectimages",
+    name="Collect Single CT Images",
+    description=(
+        "Finds CT DICOM images below patient-specific folders "
+        "and creates a flat output dataset with patient-based filenames"
+    ),
+    celery_task_name=(
+        "core.processing.tasks.run_collectsinglectimagestask"
+    ),
+    parameter_schema=CollectSingleCTImagesTaskParameters,
   ),
 }
