@@ -7,9 +7,16 @@
   <h2>Upload files or folders</h2>
   <p class="muted">
     Each upload is stored as one dataset under the configured upload root.<br>
+    <br>
     You can upload a maximum of 10000 files with a total size of max. 10GB. If your dataset is larger, split it up and upload in batches.<br>
-    If you upload multiple CT scans, make sure the folder you select contains only patient folders with CT images. For example, "abdomen/patient1",
-    "abdomen/patient2", etc. The CT images of one scan MUST be in a single folder but may be nested further down inside the patient folder.
+    <br>
+    If you upload multiple CT scans, choose the "Folder" upload button and make sure the folder you select contains only patient folders with CT images. For example, "abdomen/patient1",
+    "abdomen/patient2", etc. The CT images of one scan MUST be in a single folder but may be nested further down inside the patient folder.<br>
+    <br>
+    If you upload individual L3 images but these are stored in separate patient folders and possibly further nested down, please choose the "Folder" upload button and make sure
+    that the folder you select contains only patient folders. For example, "abdomen/patient1", "abdomen/patient2", etc. Once uploaded you can use the "Collect Single CT Images" task
+    to search for the individual L3 images and store them as a flat list in a new output dataset. The L3 image file names will be updated to indicate the patient they correspond to.
+    The output dataset can then be used to run the default body composition pipeline.<br>
   </p>
   <form id="upload-form" class="stack">
     {% csrf_token %}

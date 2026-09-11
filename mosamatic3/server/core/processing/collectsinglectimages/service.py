@@ -14,26 +14,23 @@ from ...tasking.schemas import CollectSingleCTImagesTaskParameters
 
 def _patient_name_from_relative_path(relative_path: str) -> str | None:
     """
-    Extract the top-level patient directory from a dataset-relative path.
+    Extract the patient folder name.
 
-    Examples:
+    Expected structure:
+        ROOT/PATIENT/.../image.dcm
 
-        PAT001/image.dcm
-            -> PAT001
-
-        PAT001/study/series/image.dcm
-            -> PAT001
-
-        image.dcm
-            -> None
+    Example:
+        L3_nested/PATIENT001/study/image.dcm
+        -> PATIENT001
     """
     normalized = relative_path.replace("\\", "/")
     parts = PurePosixPath(normalized).parts
 
-    if len(parts) < 2:
+    # Root + patient + image are required at minimum.
+    if len(parts) < 3:
         return None
 
-    return parts[0]
+    return parts[1]
 
 
 def _is_ct_dicom(path: Path) -> bool:
@@ -105,7 +102,7 @@ def run_collect_single_ct_images_task(
         ct_by_patient: dict[str, list[tuple[str, Path]]] = defaultdict(list)
 
         dataset_files = sorted(
-            input_dataset.files,
+            input_dataset.files.all(),
             key=lambda f: f.relative_path,
         )
 
@@ -131,7 +128,7 @@ def run_collect_single_ct_images_task(
             # Files directly in the root cannot be assigned to a patient.
             if patient_name is not None:
                 source_path = get_dataset_file_path(
-                    user_id=runtime.user_uuid,
+                    user_id=runtime.user_id,
                     dataset_id=input_dataset.id,
                     relative_path=relative_path,
                 )

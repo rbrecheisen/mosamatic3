@@ -110,4 +110,11 @@ class CalculateScoresTaskParameters(BaseModel):
 
 
 class CollectSingleCTImagesTaskParameters(BaseModel):
-  input_dataset_id: UUID
+  input_dataset_id: UUID = Field(
+    title='Input dataset',
+    description='Dataset containing patient-specific folders with individual CT images.',
+    json_schema_extra={
+      'ui_widget': 'dataset_select',
+      'dataset_reference': True,
+    },
+  )
