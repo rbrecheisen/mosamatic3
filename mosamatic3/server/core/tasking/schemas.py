@@ -109,5 +109,5 @@ class CalculateScoresTaskParameters(BaseModel):
   )
 
 
-  class CollectSingleCTImagesTaskParameters(BaseModel):
-    input_dataset_id: UUID
+class CollectSingleCTImagesTaskParameters(BaseModel):
+  input_dataset_id: UUID
