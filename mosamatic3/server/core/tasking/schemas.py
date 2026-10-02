@@ -14,6 +14,14 @@ class DemoTaskParameters(BaseModel):
   dataset_ids: list[UUID] = Field(default_factory=list, title='Datasets', json_schema_extra={'ui_widget': 'dataset_multiselect', 'dataset_reference': True})
 
 
+class DecompressDicomFilesTaskParameters(BaseModel):
+  input_dataset_id: UUID = Field(
+    title='Input dataset',
+    description='Dataset containing DICOM images. Compressed images are decompressed; already uncompressed images are copied unchanged.',
+    json_schema_extra={'ui_widget': 'dataset_select', 'dataset_reference': True},
+  )
+
+
 class RescaleDicomImagesTaskParameters(BaseModel):
   dataset_id: UUID = Field(
     title='Dataset', 

@@ -6,6 +6,7 @@ from typing import Any
 from config.celery_app import app
 from .demo.service import run_demo_task
 from .rescaledicomimages.service import run_rescale_dicom_images_task
+from .decompressdicomfiles.service import run_decompress_dicom_files_task
 from .sliceselect.service import run_slice_select_task
 from .segmentmusclefatl3.service import run_segment_muscle_fat_l3_tensorflow_task
 from .calculatescores.service import run_calculate_scores_task
@@ -66,6 +67,17 @@ def run_demotask(self, parameters: dict, user_id: str) -> dict:
         parameters=parameters,
         user_id=user_id,
         func=run_demo_task,
+    )
+
+
+@app.task(bind=True, name="core.processing.tasks.run_decompressdicomfilestask")
+def run_decompressdicomfilestask(self, parameters: dict, user_id: str) -> dict:
+    return run_logged_task(
+        celery_task=self,
+        task_name="run_decompressdicomfilestask",
+        parameters=parameters,
+        user_id=user_id,
+        func=run_decompress_dicom_files_task,
     )
 
 

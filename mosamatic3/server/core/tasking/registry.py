@@ -2,6 +2,7 @@ from .definitions import TaskDefinition
 from .schemas import (
   DemoTaskParameters, 
   RescaleDicomImagesTaskParameters,
+  DecompressDicomFilesTaskParameters,
   SliceSelectTaskParameters,
   SegmentMuscleFatL3TensorFlowTaskParameters,
   CalculateScoresTaskParameters,
@@ -15,6 +16,13 @@ TASKS = {
       description='Demonstrates task parameters and progress reporting',
       celery_task_name='core.processing.tasks.run_demotask',
       parameter_schema=DemoTaskParameters,
+  ),
+  'decompressdicomfiles': TaskDefinition(
+      key='decompressdicomfiles',
+      name='Decompress DICOM Files',
+      description='Creates one output dataset with decompressed DICOM images, copying already uncompressed images unchanged and preserving filenames and paths',
+      celery_task_name='core.processing.tasks.run_decompressdicomfilestask',
+      parameter_schema=DecompressDicomFilesTaskParameters,
   ),
   'rescaledicomimages': TaskDefinition(
       key='rescaledicomimages',
