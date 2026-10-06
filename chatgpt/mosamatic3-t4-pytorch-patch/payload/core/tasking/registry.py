@@ -55,7 +55,7 @@ down in the patient folder.
   'segmentmusclefatt4pytorch': TaskDefinition(
     key='segmentmusclefatt4pytorch',
     name='Segment Muscle/Fat T4 PyTorch',
-    description='Segments T4 CT slices using the Mosamatic2-compatible PyTorch UNet state_dict models (CPU inference)',
+    description='Segments T4 CT slices using a self-contained PyTorch TorchScript model (CPU inference)',
     celery_task_name='core.processing.tasks.run_segmentmusclefatt4pytorchtask',
     parameter_schema=SegmentMuscleFatT4PyTorchTaskParameters,
   ),

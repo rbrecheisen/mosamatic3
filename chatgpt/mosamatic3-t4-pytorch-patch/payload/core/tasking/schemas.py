@@ -96,7 +96,7 @@ class SegmentMuscleFatT4PyTorchTaskParameters(BaseModel):
   )
   model_files_dataset_id: UUID = Field(
     title='T4 PyTorch model dataset',
-    description='Dataset containing model-<version>.pt, contour_model-<version>.pt and params-<version>.json (Mosamatic2-compatible PyTorch state_dict models)',
+    description='Dataset containing a TorchScript model-<version>.pt/.pth/.zip and params-<version>.json',
     json_schema_extra={'ui_widget': 'dataset_select', 'dataset_reference': True},
   )
   model_version: str = Field(
@@ -112,7 +112,7 @@ class SegmentMuscleFatT4PyTorchTaskParameters(BaseModel):
   probabilities: bool = Field(
     default=False,
     title='Output probabilities',
-    description='Optional: store HxWxC softmax probability maps instead of 0/1/5/7 labels (not supported by Calculate Scores)',
+    description='Store HxWxC probability maps instead of 0/1/5/7 labels (not supported by Calculate Scores)',
   )
 
 

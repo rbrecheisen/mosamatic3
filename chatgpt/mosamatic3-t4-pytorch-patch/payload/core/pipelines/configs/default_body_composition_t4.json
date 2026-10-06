@@ -1,6 +1,6 @@
 {
   "name": "Default body composition pipeline T4",
-  "version": 4,
+  "version": 3,
   "steps": [
     {
       "id": "decompress",

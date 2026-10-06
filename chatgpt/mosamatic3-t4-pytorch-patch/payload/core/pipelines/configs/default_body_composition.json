@@ -1,6 +1,6 @@
 {
-  "name": "Default body composition pipeline T4",
-  "version": 4,
+  "name": "Default body composition pipeline L3",
+  "version": 2,
   "steps": [
     {
       "id": "decompress",
@@ -20,7 +20,7 @@
     },
     {
       "id": "segment",
-      "task_key": "segmentmusclefatt4pytorch",
+      "task_key": "segmentmusclefatl3tensorflow",
       "input_parameter": "dataset_id",
       "input_dataset": "$steps.rescale.output_dataset",
       "parameters": {
@@ -43,5 +43,5 @@
       }
     }
   ],
-  "model_dataset": "T4"
+  "model_dataset": "L3"
 }
