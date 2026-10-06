@@ -1,5 +1,5 @@
 {
-  "name": "Default body composition pipeline L3",
+  "name": "Default body composition pipeline T4",
   "version": 2,
   "steps": [
     {
@@ -43,5 +43,5 @@
       }
     }
   ],
-  "model_dataset": "L3"
+  "model_dataset": "T4"
 }
