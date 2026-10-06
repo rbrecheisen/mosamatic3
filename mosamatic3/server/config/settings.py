@@ -97,6 +97,7 @@ if not UPLOAD_ROOT.is_absolute():
     UPLOAD_ROOT = BASE_DIR / UPLOAD_ROOT
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
+# L3 model files
 BUILTIN_MODEL_FILES_DATASET_NAME = os.getenv(
     'BUILTIN_MODEL_FILES_DATASET_NAME',
     'AI model files'
@@ -107,9 +108,22 @@ BUILTIN_MODEL_FILES_DIR = Path(
         BASE_DIR / 'core' / 'systemdatasets' / 'modelfiles',
     )
 )
-
 if not BUILTIN_MODEL_FILES_DIR.is_absolute():
     BUILTIN_MODEL_FILES_DIR = BASE_DIR / BUILTIN_MODEL_FILES_DIR
+
+# T4 model files
+BUILTIN_T4_MODEL_FILES_DATASET_NAME = os.getenv(
+    'BUILTIN_T4_MODEL_FILES_DATASET_NAME',
+    'AI model files T4'
+)
+BUILTIN_T4_MODEL_FILES_DIR = Path(
+    os.getenv(
+        'BUILTIN_T4_MODEL_FILES_DIR',
+        BASE_DIR / 'core' / 'systemdatasets' / 'modelfiles_t4',
+    )
+)
+if not BUILTIN_T4_MODEL_FILES_DIR.is_absolute():
+    BUILTIN_T4_MODEL_FILES_DIR = BASE_DIR / BUILTIN_T4_MODEL_FILES_DIR
 
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin')
