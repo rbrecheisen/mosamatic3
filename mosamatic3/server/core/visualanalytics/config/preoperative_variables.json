@@ -1,0 +1,27 @@
+{
+  "description": "Variables considered available preoperatively for exploratory outcome-associated combination screening.",
+  "variables": [
+    "gender.castor",
+    "Year_birth.castor",
+    "Age_surgery",
+    "neoadjuvant.castor",
+    "neoadjuvant_chemo",
+    "neoadjuvant.YN",
+    "lengte",
+    "gewicht",
+    "gewverlies",
+    "gewperiode",
+    "bilirubine",
+    "hemoglobine",
+    "albu",
+    "CRP",
+    "smra",
+    "muscle_area",
+    "vat_area",
+    "sat_area",
+    "smra_neo",
+    "muscle_neo",
+    "vat_neo",
+    "sat_neo"
+  ]
+}

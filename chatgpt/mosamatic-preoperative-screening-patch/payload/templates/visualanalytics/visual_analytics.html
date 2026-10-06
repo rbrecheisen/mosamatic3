@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<section class="panel va-page">
+  <div class="va-heading">
+    <div>
+      <h2>Visual Analytics</h2>
+      <p class="muted">Explore a reference cohort and place body-composition phenotypes in clinical context.</p>
+    </div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="va-upload-form">
+    {% csrf_token %}
+    <label for="cohort-file"><strong>Reference cohort Excel</strong></label>
+    <div class="va-upload-row">
+      <input id="cohort-file" name="cohort_file" type="file" accept=".xlsx,.xls,.xlsm" required>
+      <button type="submit">Load cohort</button>
+    </div>
+    <p class="muted va-small">Prototype: the workbook is read for this request only and is not stored as a Mosamatic dataset.</p>
+  </form>
+
+  {% if load_error %}<p class="message error">{{ load_error }}</p>{% endif %}
+
+  <div id="va-workspace" class="va-workspace" hidden>
+    <div class="va-status" id="va-status"></div>
+    <div class="va-controls">
+      <label>X axis<select id="va-x"></select></label>
+      <label>Y axis<select id="va-y"></select></label>
+      <label>Outcome / colour<select id="va-outcome"><option value="">None</option></select></label>
+    </div>
+    <p id="va-note" class="muted va-small"></p>
+    <div id="va-chart" class="va-chart" role="img" aria-label="Phenotype scatterplot with marginal distributions"></div>
+
+    <section class="va-combinations" aria-labelledby="va-combinations-title">
+      <h3 id="va-combinations-title">Outcome-associated combinations</h3>
+      <p class="muted va-small">Screen preoperative numeric variables that add outcome discrimination to one preoperative anchor variable. Only variables explicitly classified as preoperative in the Mosamatic configuration are considered. This is exploratory hypothesis generation, not a validated clinical prediction model.</p>
+      <div class="va-controls va-screen-controls">
+        <label>Anchor variable<select id="va-anchor"></select></label>
+        <label>Binary outcome<select id="va-screen-outcome"><option value="">Select outcome</option></select></label>
+        <div class="va-screen-action"><button id="va-find-combinations" type="button">Find interesting combinations</button></div>
+      </div>
+      <p id="va-screen-note" class="muted va-small">Select a preoperative anchor variable and binary outcome to screen preoperative candidate variables.</p>
+      <div id="va-screen-chart" class="va-screen-chart" role="img" aria-label="Ranked improvement in cross-validated AUC" hidden></div>
+      <div id="va-screen-results" class="va-screen-results" hidden></div>
+    </section>
+  </div>
+</section>
+<script id="va-cohort-data" type="application/json">{{ cohort_json|safe }}</script>
+<script id="va-preoperative-config" type="application/json">{{ preoperative_config_json|safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<script src="{% static 'visualanalytics/phenotype-explorer.js' %}"></script>
+{% endblock %}
