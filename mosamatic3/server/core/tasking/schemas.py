@@ -72,7 +72,7 @@ class SegmentMuscleFatL3TensorFlowTaskParameters(BaseModel):
     json_schema_extra={'ui_widget': 'dataset_select', 'dataset_reference': True},
   )
   model_version: str = Field(
-    default='1',
+    default='1.0',
     title='Model version',
     description='Model version used to select model-<version>.zip, contour_model-<version>.zip and params-<version>.json',
   )
