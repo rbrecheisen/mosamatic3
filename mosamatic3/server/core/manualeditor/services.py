@@ -66,14 +66,13 @@ def get_manual_editor_datasets_for_user(user) -> list[Dataset]:
 
             if name.endswith((".seg.npy", ".tag")):
                 has_segmentation = True
-                continue
-
-            try:
-                path = get_dataset_file_path(user.id, dataset.id, dataset_file.relative_path)
-                if is_dicom(path):
-                    has_dicom = True
-            except Exception:
-                pass
+            else:
+                try:
+                    path = get_dataset_file_path(user.id, dataset.id, dataset_file.relative_path)
+                    if is_dicom(path):
+                        has_dicom = True
+                except Exception:
+                    pass
 
             if has_dicom and has_segmentation:
                 result.append(dataset)

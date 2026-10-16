@@ -650,7 +650,6 @@ function handlePointerEnter(event) {
 function handlePointerLeave(event) {
   handlePointerUp(event);
   lastBrushPreviewPoint = null;
-  brushCursorElement = null;
   clearBrushPreview();
 }
 
