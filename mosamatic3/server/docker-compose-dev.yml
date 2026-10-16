@@ -40,6 +40,7 @@ services:
       - server_data:/data
       - staticfiles:/staticfiles
       - ./data/logs:/compose-logs:ro
+      - M:\data\mosamatic\extracted_from_L:/batch_l3:ro
       # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     expose:
       - "8000"
