@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from config.celery_app import app
 from core.models import Dataset, PipelineRun, PipelineStepRun
+from core.datasets.services import make_unique_dataset_name
 from core.tasking.registry import TASKS
 from core.tasking.services import validate_task_parameters
 from core.tasking.taskrunservice import create_task_run
@@ -152,6 +153,23 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
                 id=output_dataset_id,
                 owner=pipeline_run.owner,
             )
+
+            # Name outputs using the original pipeline input dataset.
+            suffix = f" - {task_definition.name}"
+            max_length = Dataset._meta.get_field("name").max_length
+            original_name = pipeline_run.initial_dataset.name
+
+            # Reserve room for uniqueness suffixes such as (2), (3).
+            base_name = (
+                f"{original_name[:max_length - len(suffix) - 10].rstrip()}"
+                f"{suffix}"
+            )
+
+            output_dataset.name = make_unique_dataset_name(
+                base_name,
+                pipeline_run.owner,
+            )
+            output_dataset.save(update_fields=["name"])
 
             step_run.status = PipelineStepRun.STATUS_SUCCESS
             step_run.output_dataset = output_dataset
