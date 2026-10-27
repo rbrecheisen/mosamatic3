@@ -41,6 +41,8 @@ services:
       - staticfiles:/staticfiles
       - ./data/logs:/compose-logs:ro
       - M:\data\mosamatic\extracted_from_L:/batch_l3:ro
+      - M:\data\mosamatic\test\CT\abdomen:/scan_input:ro
+      - M:\data\mosamatic\test\CT\abdomen_l3:/scan_output
       # - ./data/admin_password.txt:/run/secrets/admin_password.txt:ro
     expose:
       - "8000"
