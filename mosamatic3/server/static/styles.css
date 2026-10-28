@@ -641,3 +641,26 @@ code {
 .va-screen-results th { white-space: nowrap; }
 .va-screen-results button { padding: .25rem .5rem; }
 @media (max-width: 760px) { .va-screen-chart { height: 520px; } }
+
+/* Prominent intended-use notice on the login and home pages. */
+.research-use-notice {
+  margin: 1rem 0 1.25rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid #f3bd80;
+  border-left: 5px solid #b45309;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+.research-use-notice-title {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.research-use-notice p {
+  margin: 0.55rem 0 0;
+}

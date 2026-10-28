@@ -3,6 +3,7 @@
 <section class="card">
   <p class="eyebrow">Welcome</p>
   <h2>Hello{% if request.user.username %}, {{ request.user.username }}{% endif %}.</h2>
+  {% include 'partials/research_use_notice.html' %}
   <p class="muted">
     You are logged in.
   </p>
