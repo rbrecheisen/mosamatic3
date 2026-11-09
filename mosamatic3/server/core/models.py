@@ -218,6 +218,7 @@ class TaskRun(models.Model):
     celery_task_id = models.CharField(max_length=100, unique=True, db_index=True)
     status = models.CharField(max_length=40, default='queued', db_index=True)
     cancel_requested = models.BooleanField(default=False, db_index=True)
+    error_message = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(default=timezone.now)
 

@@ -1,3 +1,4 @@
+import logging
 from uuid import uuid4
 
 from celery.exceptions import Ignore
@@ -7,10 +8,13 @@ from config.celery_app import app
 from core.models import Dataset, PipelineRun, PipelineStepRun
 from core.datasets.services import make_unique_dataset_name
 from core.tasking.registry import TASKS
+from core.tasking.errors import describe_task_error
 from core.tasking.services import validate_task_parameters
 from core.tasking.taskrunservice import create_task_run
 from core.dicomimport.services import update_dicom_import_status_from_pipeline_run
 from .resolver import resolve_dataset_reference, extract_first_output_dataset_id
+
+logger = logging.getLogger(__name__)
 
 
 def sync_dicom_import_status_if_needed(pipeline_run: PipelineRun) -> None:
@@ -39,6 +43,9 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
         "steps": {},
     }
 
+    step_run = None
+    step_id = None
+    task_key = None
     try:
         for order, step_config in enumerate(pipeline_run.config["steps"]):
             pipeline_run.refresh_from_db()
@@ -49,6 +56,7 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
                 pipeline_run.save(update_fields=["status", "finished_at"])
                 return {"status": "CANCELED"}
 
+            step_run = None
             step_id = step_config["id"]
             task_key = step_config["task_key"]
             input_parameter = step_config["input_parameter"]
@@ -126,12 +134,13 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
 
             if async_result.state != "SUCCESS":
                 step_run.status = PipelineStepRun.STATUS_FAILURE
-                step_run.error_message = str(result)
+                error_message = describe_task_error(result)
+                step_run.error_message = error_message
                 step_run.finished_at = timezone.now()
                 step_run.save(update_fields=["status", "error_message", "finished_at"])
 
                 pipeline_run.status = PipelineRun.STATUS_FAILURE
-                pipeline_run.error_message = f"Step '{step_id}' failed: {result}"
+                pipeline_run.error_message = f"Step '{step_id}' ({task_definition.name}) failed: {error_message}"
                 pipeline_run.finished_at = timezone.now()
                 pipeline_run.save(
                     update_fields=[
@@ -141,10 +150,15 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
                     ]
                 )
 
+                logger.error(
+                    'Pipeline failed: pipeline_run_id=%s step=%s task=%s error=%s',
+                    pipeline_run.id, step_id, task_key, error_message,
+                )
+                sync_dicom_import_status_if_needed(pipeline_run)
                 return {
                     "status": "FAILURE",
                     "failed_step": step_id,
-                    "error": str(result),
+                    "error": error_message,
                 }
 
             output_dataset_id = extract_first_output_dataset_id(result)
@@ -199,8 +213,17 @@ def run_pipeline(self, pipeline_run_id: str) -> dict:
         raise
 
     except Exception as exc:
+        error_message = describe_task_error(exc)
+        context = f"Step '{step_id}' ({task_key}) failed: " if step_id else 'Pipeline failed: '
+        full_message = context + error_message
+        logger.exception('Pipeline failed: pipeline_run_id=%s error=%s', pipeline_run.id, full_message)
+        if step_run is not None and step_run.status == PipelineStepRun.STATUS_RUNNING:
+            step_run.status = PipelineStepRun.STATUS_FAILURE
+            step_run.error_message = error_message
+            step_run.finished_at = timezone.now()
+            step_run.save(update_fields=['status', 'error_message', 'finished_at'])
         pipeline_run.status = PipelineRun.STATUS_FAILURE
-        pipeline_run.error_message = str(exc)
+        pipeline_run.error_message = full_message
         pipeline_run.finished_at = timezone.now()
         pipeline_run.save(update_fields=["status", "error_message", "finished_at"])
         sync_dicom_import_status_if_needed(pipeline_run)

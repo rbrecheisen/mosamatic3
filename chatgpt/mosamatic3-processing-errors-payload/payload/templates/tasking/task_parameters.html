@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card">
+  <h2>{{ task.name }}</h2>
+  <p class="muted">{{ task.description }}</p>
+  <form id="params-form" class="stack">
+    {% csrf_token %}
+    <div class="row">
+      <button id="run-button-top" type="button" disabled>Run</button>
+      <button id="cancel-button-top" type="button" class="warning" style="display:none">Cancel</button>
+    </div>
+    <div id="fields"></div>
+    <div class="row">
+      <button id="save-button" type="submit">Save parameters</button>
+      <button id="run-button-bottom" type="button" disabled>Run</button>
+      <button id="cancel-button-bottom" type="button" class="warning" style="display:none">Cancel</button>
+    </div>
+  </form>
+  <p id="task-message" class="message" role="status" aria-live="polite" style="display:none"></p>
+</section>
+<section class="card">
+  <h3>Recent task runs</h3>
+  <p class="muted">Last five runs. Reload this page to refresh the history.</p>
+  {% for run in recent_runs %}
+    <div class="processing-run-history">
+      <strong>{{ run.created_at }} — {{ run.status }}</strong>
+      {% if run.error_message %}
+        <p class="message error processing-error">{{ run.error_message }}</p>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p class="muted">No previous runs.</p>
+  {% endfor %}
+</section>
+<script id="schema-data" type="application/json">{{ schema_json|safe }}</script>
+<script id="saved-data" type="application/json">{{ saved_json|safe }}</script>
+<script>
+const taskKey = '{{ task.key }}';
+const schema = JSON.parse(document.getElementById('schema-data').textContent);
+const saved = JSON.parse(document.getElementById('saved-data').textContent || '{}');
+const datasets = [
+  {% for d in datasets %}
+    {
+      id: '{{ d.id }}',
+      name: '{{ d.name|escapejs }}',
+      kind: '{{ d.kind }}',
+      status: '{{ d.status }}'
+    },
+  {% endfor %}
+];
+const fields = document.getElementById('fields');
+const message = document.getElementById('task-message');
+const runButtons = [
+  document.getElementById('run-button-top'),
+  document.getElementById('run-button-bottom'),
+];
+
+const cancelButtons = [
+  document.getElementById('cancel-button-top'),
+  document.getElementById('cancel-button-bottom'),
+].filter(Boolean);
+
+function setRunButtonsDisabled(disabled) {
+  runButtons.forEach(button => button.disabled = disabled);
+}
+
+function showRunButtons() {
+  runButtons.forEach(button => button.style.display = 'inline-flex');
+  cancelButtons.forEach(button => button.style.display = 'none');
+}
+
+function showCancelButtons() {
+  runButtons.forEach(button => button.style.display = 'none');
+  cancelButtons.forEach(button => button.style.display = 'inline-flex');
+}
+
+let activeTaskId = null;
+
+function show(text, isError=false){ message.style.display='block'; message.textContent=text; message.classList.toggle('error', isError); }
+
+function buildField(name, prop){
+  if (name === 'patient_id_path_part_index') {
+    return;
+  }
+  const label = document.createElement('label');
+  label.classList.add('parameter-field');
+  label.textContent = prop.title || name;
+  let input;
+  const widget = prop.ui_widget || prop?.json_schema_extra?.ui_widget;
+  if (widget === 'dataset_select') {
+    input = document.createElement('select'); input.name = name;
+    // input.innerHTML = '<option value="">Select dataset...</option>' + datasets.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    input.innerHTML =
+      '<option value="">Select dataset...</option>' +
+      datasets
+        .map(d => `<option value="${d.id}">${d.name} (${d.kind}, ${d.status})</option>`)
+        .join('');
+  } else if (widget === 'dataset_multiselect') {
+    input = document.createElement('select'); input.name = name; input.multiple = true;
+    // input.innerHTML = datasets.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    input.innerHTML = datasets
+      .map(d => `<option value="${d.id}">${d.name} (${d.kind}, ${d.status})</option>`)
+      .join('');
+  } else if (prop.type === 'boolean') {
+    label.classList.add('checkbox-row');
+    input = document.createElement('input'); input.type='checkbox'; input.name=name;
+  } else if (prop.enum) {
+    input = document.createElement('select'); input.name=name; input.innerHTML = prop.enum.map(v => `<option value="${v}">${v}</option>`).join('');
+  } else {
+    input = document.createElement('input'); input.name=name; input.type = prop.type === 'integer' || prop.type === 'number' ? 'number' : 'text';
+    if (prop.minimum !== undefined) input.min = prop.minimum; if (prop.maximum !== undefined) input.max = prop.maximum;
+  }
+  const current = saved[name] ?? prop.default;
+  if (input.type === 'checkbox') input.checked = Boolean(current); else if (input.multiple && Array.isArray(current)) Array.from(input.options).forEach(o => o.selected = current.includes(o.value)); else if (current !== undefined && current !== null) input.value = current;
+  label.appendChild(input); fields.appendChild(label);
+}
+
+Object.entries(schema.properties || {}).forEach(([name, prop]) => buildField(name, prop));
+setRunButtonsDisabled(Object.keys(saved).length === 0);
+document.getElementById('params-form').addEventListener('submit', async (event)=>{
+  event.preventDefault();
+  const params = {};
+  // fields.querySelectorAll('input, select').forEach(el => { params[el.name] = el.type === 'checkbox' ? el.checked : (el.multiple ? Array.from(el.selectedOptions).map(o => o.value) : (el.value === '' ? null : (el.type === 'number' ? Number(el.value) : el.value))); });
+  fields.querySelectorAll('input, select').forEach(el => {
+    const prop = schema.properties[el.name];
+
+    if (el.type === 'checkbox') {
+      params[el.name] = el.checked;
+    } else if (el.multiple) {
+      params[el.name] = Array.from(el.selectedOptions).map(o => o.value);
+    } else if (el.value === '') {
+      params[el.name] = prop.type === 'string' ? '' : null;
+    } else if (el.type === 'number') {
+      params[el.name] = Number(el.value);
+    } else {
+      params[el.name] = el.value;
+    }
+  });
+  const response = await fetch(`/api/tasks/${taskKey}/parameters/`, {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':window.csrfToken}, body:JSON.stringify({task_key:taskKey, parameters:params})});
+  if(response.ok){ show('Parameters saved.'); setRunButtonsDisabled(false); } else show(await response.text());
+});
+
+async function runTask() {
+  const response = await fetch(`/api/tasks/${taskKey}/run/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': window.csrfToken}
+  });
+
+  if (!response.ok) {
+    show(await response.text());
+    return;
+  }
+
+  const data = await response.json();
+  activeTaskId = data.task_id;
+  showCancelButtons();
+  pollStatus();
+}
+
+runButtons.forEach(button => button.addEventListener('click', runTask));
+
+async function cancelTask() {
+  if (!activeTaskId) return;
+
+  await fetch(`/api/tasks/${activeTaskId}/cancel/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': window.csrfToken}
+  });
+
+  show('Cancel requested.');
+}
+
+cancelButtons.forEach(button => button.addEventListener('click', cancelTask));
+
+async function pollStatus(){
+  if(!activeTaskId) return;
+  let s;
+  try {
+    const r = await fetch(`/api/tasks/${activeTaskId}/`);
+    if (!r.ok) throw new Error(`Status request failed (HTTP ${r.status})`);
+    s = await r.json();
+  } catch (error) {
+    show(`Unable to retrieve task status: ${error.message}`, true);
+    setTimeout(pollStatus, 3000);
+    return;
+  }
+  show(`${s.state}: ${s.message || ''} ${s.current !== undefined ? `(${s.current}/${s.total})` : ''}`, s.state === 'FAILURE');
+  if(['SUCCESS','FAILURE','REVOKED'].includes(s.state)){
+    showRunButtons();
+    return;
+  }
+  setTimeout(pollStatus, 1000);
+}
+</script>
+{% endblock %}

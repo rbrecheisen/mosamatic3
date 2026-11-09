@@ -6,6 +6,7 @@ from celery.exceptions import Ignore
 from ...common.dicom import load_dicom
 from ...datasets.serializers import DatasetSerializer
 from ...datasets.services import OutputDatasetFile
+from ...tasking.errors import ProcessingInputError, decode_single_grayscale_image
 from ...tasking.runtime import TaskRuntime
 from ...tasking.schemas import RescaleDicomImagesTaskParameters
 
@@ -26,17 +27,26 @@ def rescale_image(p, target_size):
     return p
 
 
-def process_dicom_file(file_path, relative_path: str, target_size: int) -> OutputDatasetFile | None:
-    p = load_dicom(file_path)
+def process_dicom_file(file_path, relative_path: str, target_size: int) -> OutputDatasetFile:
+    try:
+        p = load_dicom(file_path)
+    except Exception as exc:
+        raise ProcessingInputError(
+            f'Cannot read DICOM file "{relative_path}": {type(exc).__name__}: {exc}'
+        ) from exc
     if p is None:
-        return None
-    if len(p.pixel_array.shape) != 2:
-        print(f'Shape of pixel data should be 2D but is {p.pixel_array.shape}')
-        return None
-    if p.Rows != target_size or p.Columns != target_size:
-        p = rescale_image(p, target_size)
-    buffer = BytesIO()
-    p.save_as(buffer)
+        raise ProcessingInputError(f'Cannot read DICOM file "{relative_path}". Check the file format and DICOM header.')
+    decode_single_grayscale_image(p, relative_path)
+    try:
+        if p.Rows != target_size or p.Columns != target_size:
+            p = rescale_image(p, target_size)
+        buffer = BytesIO()
+        p.save_as(buffer)
+    except Exception as exc:
+        raise ProcessingInputError(
+            f'Failed to rescale DICOM file "{relative_path}": {type(exc).__name__}: {exc}. '
+            'Check RescaleSlope, RescaleIntercept and PixelSpacing.'
+        ) from exc
     return OutputDatasetFile(relative_path=relative_path, content=buffer.getvalue())
 
 
@@ -47,12 +57,13 @@ def run_rescale_dicom_images_task(parameters: dict, user_id: str, celery_task=No
     try:
         dataset = runtime.get_input_dataset(params.dataset_id)
         total = dataset.files.count()
+        if total == 0:
+            raise ProcessingInputError('Rescale input dataset contains no files.')
         runtime.update_progress(current=0, total=total, message='Starting DICOM rescaling')
         output_files = []
         for item in runtime.iter_dataset_files(dataset, message_factory=lambda current, total: f'Rescale DICOM files iteration {current} of {total}'):
             output_file = process_dicom_file(item.path, item.file.relative_path, params.target_size)
-            if output_file is not None:
-                output_files.append(output_file)
+            output_files.append(output_file)
             time.sleep(0.05)
         output_dataset = runtime.create_output_dataset(name='Rescale DICOM Images output', files=output_files)
         runtime.update_progress(current=total, total=total, message='Finished DICOM rescaling')

@@ -3,7 +3,10 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from celery.exceptions import Ignore
 from config.celery_app import app
+from core.tasking.errors import describe_task_error
+from core.tasking.taskrunservice import record_task_failure
 from .demo.service import run_demo_task
 from .rescaledicomimages.service import run_rescale_dicom_images_task
 from .decompressdicomfiles.service import run_decompress_dicom_files_task
@@ -48,15 +51,21 @@ def run_logged_task(
 
         return result
 
-    except Exception:
+    except Ignore:
+        logger.info('Task cancelled: task_name=%s task_id=%s user_id=%s', task_name, task_id, user_id)
+        raise
+    except Exception as exc:
         duration = time.monotonic() - start
+        error_message = describe_task_error(exc)
         logger.exception(
-            "Task failed: task_name=%s task_id=%s user_id=%s duration_seconds=%.2f",
+            "Task failed: task_name=%s task_id=%s user_id=%s duration_seconds=%.2f error=%s",
             task_name,
             task_id,
             user_id,
             duration,
+            error_message,
         )
+        record_task_failure(task_id, error_message)
         raise
 
 

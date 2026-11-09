@@ -7,7 +7,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 
 from config.celery_app import app as celery_app
 
-from ..models import Dataset, TaskParameters
+from ..models import Dataset, TaskParameters, TaskRun
+from .errors import describe_task_error
 from .registry import TASKS
 from .taskrunservice import create_task_run, request_task_cancel
 
@@ -177,7 +178,10 @@ def cancel_task_by_id(task_id: str, user) -> dict[str, object]:
     }
 
 
-def get_celery_task_status(task_id: str) -> dict[str, object]:
+def get_celery_task_status(task_id: str, user) -> dict[str, object]:
+    task_run = TaskRun.objects.filter(celery_task_id=task_id, owner=user).first()
+    if task_run is None:
+        raise NotFound('Task run not found')
     result = AsyncResult(task_id, app=celery_app)
 
     response = {
@@ -186,13 +190,23 @@ def get_celery_task_status(task_id: str) -> dict[str, object]:
     }
 
     if result.state == 'PENDING':
-        response['message'] = 'Task is pending or unknown'
+        if task_run.status == 'failed':
+            response['state'] = 'FAILURE'
+            response['message'] = task_run.error_message or 'Task failed; see worker logs.'
+        elif task_run.status == 'finished':
+            response['state'] = 'SUCCESS'
+            response['message'] = 'Task completed (result has expired).'
+        elif task_run.status == 'cancelled':
+            response['state'] = 'REVOKED'
+            response['message'] = 'Task was cancelled'
+        else:
+            response['message'] = 'Task is pending or running'
 
     elif result.state == 'REVOKED':
         response['message'] = 'Task was cancelled'
 
     elif result.state == 'FAILURE':
-        response['message'] = str(result.info)
+        response['message'] = task_run.error_message or describe_task_error(result.info)
 
     elif isinstance(result.info, dict):
         response.update(result.info)

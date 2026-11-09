@@ -28,7 +28,7 @@ def task_run(request, task_key):
 
 @api_view(['GET'])
 def task_status(request, task_id):
-    return Response(get_celery_task_status(task_id))
+    return Response(get_celery_task_status(task_id, request.user))
 
 @api_view(['POST'])
 def task_cancel(request, task_id):

@@ -11,6 +11,7 @@ from ...common.utils import normalize_between, convert_labels_to_157
 from ...datasets.serializers import DatasetSerializer
 from ...datasets.services import OutputDatasetFile, get_dataset_file_path, dataset_upload_root, safe_relative_path
 from ...models import Dataset
+from ...tasking.errors import ProcessingInputError, decode_single_grayscale_image
 from ...tasking.runtime import TaskRuntime
 from ...tasking.schemas import SegmentMuscleFatL3TensorFlowTaskParameters
 
@@ -145,8 +146,9 @@ def process_dicom_file(
 ) -> list[OutputDatasetFile]:
     dicom_object = load_dicom(dicom_path)
     if dicom_object is None:
-        return []
+        raise ProcessingInputError(f'Cannot read DICOM file "{relative_path}" for L3 segmentation.')
 
+    decode_single_grayscale_image(dicom_object, relative_path)
     pixels = get_pixels_from_dicom_object(dicom_object)
 
     if contour_model is not None:
@@ -261,6 +263,11 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
         )
 
         total = len(input_files)
+        if total == 0:
+            raise ProcessingInputError(
+                'No DICOM images found for L3 segmentation. '
+                'Check the input dataset, DICOM file format and input path prefix.'
+            )
         output_files: list[OutputDatasetFile] = []
 
         runtime.update_progress(
@@ -284,14 +291,22 @@ def run_segment_muscle_fat_l3_tensorflow_task(parameters: dict, user_id: str, ce
                 dataset_file.relative_path,
             )
 
-            files = process_dicom_file(
-                dicom_path=dicom_path,
-                relative_path=dataset_file.relative_path,
-                model=model,
-                contour_model=contour_model,
-                model_params=model_params,
-                probabilities=params.probabilities,
-            )
+            try:
+                files = process_dicom_file(
+                    dicom_path=dicom_path,
+                    relative_path=dataset_file.relative_path,
+                    model=model,
+                    contour_model=contour_model,
+                    model_params=model_params,
+                    probabilities=params.probabilities,
+                )
+            except ProcessingInputError:
+                raise
+            except Exception as exc:
+                raise RuntimeError(
+                    f'L3 segmentation failed for "{dataset_file.relative_path}": '
+                    f'{type(exc).__name__}: {exc}'
+                ) from exc
             output_files.extend(files)
 
             runtime.update_progress(

@@ -35,6 +35,7 @@ from ...common.utils import (
 from ...datasets.serializers import DatasetSerializer
 from ...datasets.services import OutputDatasetFile, get_dataset_file_path
 from ...models import Dataset
+from ...tasking.errors import ProcessingInputError, decode_single_grayscale_image
 from ...tasking.runtime import TaskRuntime
 from ...tasking.schemas import CalculateScoresTaskParameters
 
@@ -180,7 +181,7 @@ def collect_img_seg_pairs(
 
 def validate_segmentation_labels(segmentation: np.ndarray, path: Path) -> np.ndarray:
     if segmentation.ndim != 2:
-        raise RuntimeError(f'Segmentation must be 2D: {path.name}')
+        raise ProcessingInputError(f'Segmentation file "{path.name}" must be 2D, got shape={segmentation.shape}.')
 
     allowed_labels = {0, MUSCLE, VAT, SAT}
 
@@ -200,8 +201,10 @@ def load_segmentation(path: Path, file_type: Literal['npy', 'tag']) -> np.ndarra
         pixels = get_pixels_from_tag_file(path)
         try:
             segmentation = pixels.reshape(512, 512)
-        except Exception:
-            return None
+        except Exception as exc:
+            raise ProcessingInputError(
+                f'Cannot reshape TAG segmentation "{path.name}" to 512 x 512: {exc}'
+            ) from exc
 
         return validate_segmentation_labels(segmentation, path)
 
@@ -458,8 +461,15 @@ def run_calculate_scores_task(parameters: dict, user_id: str, celery_task=None) 
                 if dicom_object is None:
                     raise RuntimeError(f'Could not load DICOM image: {dicom_file.relative_path}')
 
+                decode_single_grayscale_image(dicom_object, dicom_file.relative_path)
                 image = get_pixels_from_dicom_object(dicom_object, normalize=True)
-                pixel_spacing = dicom_object.PixelSpacing
+                try:
+                    pixel_spacing = dicom_object.PixelSpacing
+                except AttributeError as exc:
+                    raise ProcessingInputError(
+                        f'DICOM file "{dicom_file.relative_path}" is missing PixelSpacing, '
+                        'which is required for area calculations.'
+                    ) from exc
 
                 segmentation = load_segmentation(segmentation_path, params.file_type)
 

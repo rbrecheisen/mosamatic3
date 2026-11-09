@@ -664,3 +664,12 @@ code {
 .research-use-notice p {
   margin: 0.55rem 0 0;
 }
+
+/* Processing diagnostics: show long per-file failures without breaking tables. */
+.processing-error { color: #a61b16; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92rem; line-height: 1.45; margin-top: .4rem; }
+.processing-run-history { padding: .6rem 0; border-top: 1px solid #e2e6f0; }
+.pipeline-step-details { margin-top: .4rem; }
+.pipeline-step-details p { font-size: .9rem; margin: .35rem 0; }
+#task-message { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.message.error { background: #fff3f1; border-left-color: #b42318; color: #9f1c17; }

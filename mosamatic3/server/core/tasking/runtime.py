@@ -5,6 +5,7 @@ from celery.exceptions import Ignore
 from pydantic import BaseModel
 from ..models import Dataset
 from ..datasets.services import OutputDatasetFile, create_output_dataset_for_user_id, get_dataset_file_path
+from .errors import ProcessingInputError
 from .taskrunservice import is_cancel_requested, mark_task_run_status
 
 TParams = TypeVar('TParams', bound=BaseModel)
@@ -47,7 +48,12 @@ class TaskRuntime:
         mark_task_run_status(self.task_id, 'failed')
 
     def get_input_dataset(self, dataset_id) -> Dataset:
-        return Dataset.objects.get(id=dataset_id, owner_id=self.user_id)
+        try:
+            return Dataset.objects.get(id=dataset_id, owner_id=self.user_id)
+        except Dataset.DoesNotExist as exc:
+            raise ProcessingInputError(
+                f'Input dataset {dataset_id} is missing or inaccessible for task "{self.task_key}".'
+            ) from exc
 
     def iter_dataset_files(self, dataset: Dataset, *, message_factory: Callable[[int, int], str]) -> Iterator[TaskDatasetFile]:
         files = list(dataset.files.all())
@@ -60,4 +66,9 @@ class TaskRuntime:
             self.update_progress(current=current, total=total, message=message_factory(current, total))
 
     def create_output_dataset(self, *, name: str, files: list[OutputDatasetFile]):
+        if not files:
+            raise ProcessingInputError(
+                f'Task "{self.task_key}" produced no output files. '
+                'Check the input dataset and task-specific file validation messages.'
+            )
         return create_output_dataset_for_user_id(name=name, files=files, user_id=self.user_id, source_task_key=self.task_key, source_task_id=self.task_id)

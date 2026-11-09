@@ -24,6 +24,13 @@ def mark_task_run_status(celery_task_id: str | None, status: str) -> None:
         return
     TaskRun.objects.filter(celery_task_id=celery_task_id).update(status=status, updated_at=timezone.now())
 
+def record_task_failure(celery_task_id: str | None, message: str) -> None:
+    if celery_task_id:
+        TaskRun.objects.filter(celery_task_id=celery_task_id).update(
+            status='failed', error_message=message, updated_at=timezone.now()
+        )
+
+
 def request_task_cancel_by_celery_id(celery_task_id: str):
     task_run = TaskRun.objects.filter(celery_task_id=celery_task_id).first()
 

@@ -1,4 +1,5 @@
 import json
+import logging
 import hashlib
 import tempfile
 import time
@@ -21,6 +22,8 @@ from ...tasking.schemas import SliceSelectTaskParameters
 
 from . import engine
 from .engine import CandidateScan, read_dicom_header
+
+logger = logging.getLogger(__name__)
 
 
 def process_scan(scan: CandidateScan, params: SliceSelectTaskParameters, temp_root: Path):
@@ -308,6 +311,10 @@ def run_slice_select_task(parameters: dict, user_id: str, celery_task=None) -> d
                     save_manifest(output_dataset, manifest)
 
                 except Exception as exc:
+                    logger.exception(
+                        'Slice selection failed for scan %s (series %s): %s',
+                        scan.relative_path, scan.series_instance_uid, exc,
+                    )
                     manifest.setdefault('scans', {})[scan.series_instance_uid] = {
                         'series_instance_uid': scan.series_instance_uid,
                         'relative_path': scan.relative_path,
@@ -339,7 +346,16 @@ def run_slice_select_task(parameters: dict, user_id: str, celery_task=None) -> d
             output_dataset.status = 'failed'
             output_dataset.save(update_fields=['status'])
 
-            message = f'Slice selection failed: no {params.vertebral_level} slice was selected from {total} candidate scan(s)'
+            failures = [
+                (entry.get('relative_path', '?'), entry['errors'][0])
+                for entry in manifest.get('scans', {}).values()
+                if entry.get('status') == 'failed' and entry.get('errors')
+            ]
+            details = f' First failure: {failures[0][0]}: {failures[0][1]}' if failures else ''
+            message = (
+                f'Slice selection failed: no {params.vertebral_level} slice was selected '
+                f'from {total} candidate scan(s).{details}'
+            )
 
             runtime.update_progress(
                 current=total,
@@ -377,6 +393,15 @@ def run_slice_select_task(parameters: dict, user_id: str, celery_task=None) -> d
         output_dataset.save(update_fields=['status'])
 
         message = f'Slice selection completed: {completed_count} succeeded, {failed_count} failed'
+        if failed_count:
+            failures = [
+                (entry.get('relative_path', '?'), entry['errors'][0])
+                for entry in manifest.get('scans', {}).values()
+                if entry.get('status') == 'failed' and entry.get('errors')
+            ]
+            if failures:
+                message += f'. First failure: {failures[0][0]}: {failures[0][1]}'
+            message += '. See slice_select_manifest.json for all scan errors.'
 
         runtime.update_progress(
             current=total,

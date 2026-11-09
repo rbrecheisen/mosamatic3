@@ -19,6 +19,7 @@ from ...common.utils import convert_labels_to_157, normalize_between
 from ...datasets.serializers import DatasetSerializer
 from ...datasets.services import OutputDatasetFile, get_dataset_file_path
 from ...models import Dataset
+from ...tasking.errors import ProcessingInputError, decode_single_grayscale_image
 from ...tasking.runtime import TaskRuntime
 from ...tasking.schemas import SegmentMuscleFatT4PyTorchTaskParameters
 from . import models
@@ -164,7 +165,8 @@ def process_dicom_file(
     """Mirror Mosamatic2 preprocessing/inference while producing Mosamatic3 output."""
     dicom_object = load_dicom(dicom_path)
     if dicom_object is None:
-        raise RuntimeError(f"Could not read T4 DICOM: {relative_path}")
+        raise ProcessingInputError(f'Cannot read DICOM file "{relative_path}" for T4 segmentation.')
+    decode_single_grayscale_image(dicom_object, relative_path)
 
     # Mosamatic2 requests normalized=True here, which means conversion back to HU
     # using DICOM RescaleSlope/RescaleIntercept.
@@ -286,8 +288,8 @@ def run_segment_muscle_fat_t4_pytorch_task(
                 image_dataset.id,
                 entry.relative_path,
             )
-            output_files.extend(
-                process_dicom_file(
+            try:
+                files = process_dicom_file(
                     dicom_path=image_path,
                     relative_path=entry.relative_path,
                     model=model,
@@ -295,7 +297,14 @@ def run_segment_muscle_fat_t4_pytorch_task(
                     params=model_params,
                     probabilities=params.probabilities,
                 )
-            )
+            except ProcessingInputError:
+                raise
+            except Exception as exc:
+                raise RuntimeError(
+                    f'T4 segmentation failed for "{entry.relative_path}": '
+                    f'{type(exc).__name__}: {exc}'
+                ) from exc
+            output_files.extend(files)
             runtime.update_progress(
                 current=index + 1,
                 total=total,

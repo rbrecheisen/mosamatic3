@@ -16,7 +16,21 @@
       <button id="cancel-button-bottom" type="button" class="warning" style="display:none">Cancel</button>
     </div>
   </form>
-  <p id="task-message" class="message" style="display:none"></p>
+  <p id="task-message" class="message" role="status" aria-live="polite" style="display:none"></p>
+</section>
+<section class="card">
+  <h3>Recent task runs</h3>
+  <p class="muted">Last five runs. Reload this page to refresh the history.</p>
+  {% for run in recent_runs %}
+    <div class="processing-run-history">
+      <strong>{{ run.created_at }} — {{ run.status }}</strong>
+      {% if run.error_message %}
+        <p class="message error processing-error">{{ run.error_message }}</p>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p class="muted">No previous runs.</p>
+  {% endfor %}
 </section>
 <script id="schema-data" type="application/json">{{ schema_json|safe }}</script>
 <script id="saved-data" type="application/json">{{ saved_json|safe }}</script>
@@ -62,7 +76,7 @@ function showCancelButtons() {
 
 let activeTaskId = null;
 
-function show(text){ message.style.display='block'; message.textContent=text; }
+function show(text, isError=false){ message.style.display='block'; message.textContent=text; message.classList.toggle('error', isError); }
 
 function buildField(name, prop){
   if (name === 'patient_id_path_part_index') {
@@ -160,8 +174,17 @@ cancelButtons.forEach(button => button.addEventListener('click', cancelTask));
 
 async function pollStatus(){
   if(!activeTaskId) return;
-  const r = await fetch(`/api/tasks/${activeTaskId}/`); const s = await r.json();
-  show(`${s.state}: ${s.message || ''} ${s.current !== undefined ? `(${s.current}/${s.total})` : ''}`);
+  let s;
+  try {
+    const r = await fetch(`/api/tasks/${activeTaskId}/`);
+    if (!r.ok) throw new Error(`Status request failed (HTTP ${r.status})`);
+    s = await r.json();
+  } catch (error) {
+    show(`Unable to retrieve task status: ${error.message}`, true);
+    setTimeout(pollStatus, 3000);
+    return;
+  }
+  show(`${s.state}: ${s.message || ''} ${s.current !== undefined ? `(${s.current}/${s.total})` : ''}`, s.state === 'FAILURE');
   if(['SUCCESS','FAILURE','REVOKED'].includes(s.state)){
     showRunButtons();
     return;

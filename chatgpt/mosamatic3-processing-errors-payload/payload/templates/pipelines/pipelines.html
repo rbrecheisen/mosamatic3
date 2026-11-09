@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="card">
+  <h2>Pipelines</h2>
+  <p class="muted">Select a predefined pipeline configuration.</p>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Version</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pipeline in pipeline_configs %}
+        <tr>
+          <td>{{ pipeline.name }}</td>
+          <td>{{ pipeline.version|default:"-" }}</td>
+          <td>
+            <a class="button-like" href="{% url 'pipeline_detail' pipeline.key %}">
+              Configure / Run
+            </a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="3" class="muted">No pipeline configs found.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <div class="section-title-row">
+    <h3>Pipeline runs</h3>
+    {% if pipeline_runs %}
+      <button id="delete-all-pipeline-runs" class="link-button danger-link">
+        (delete all)
+      </button>
+    {% endif %}
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Current step</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in pipeline_runs %}
+        <tr>
+          <td>{{ run.name }}</td>
+          <td class="pipeline-status">
+            <strong>{{ run.status }}</strong>
+            {% if run.error_message %}
+              <div class="processing-error" role="alert">{{ run.error_message }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {{ run.current_step_id|default:"-" }}
+            {% if run.status == 'FAILURE' %}
+              <details class="pipeline-step-details">
+                <summary>Step details</summary>
+                {% for step in run.step_runs.all %}
+                  <p><strong>{{ step.step_id }}</strong> — {{ step.status }}
+                    {% if step.error_message %}<span class="processing-error">{{ step.error_message }}</span>{% endif %}
+                  </p>
+                {% endfor %}
+              </details>
+            {% endif %}
+          </td>
+          <td>{{ run.created_at }}</td>
+          <td>
+            {% if run.status == "PENDING" or run.status == "RUNNING" %}
+              <button type="button" class="cancel-pipeline-button" data-id="{{ run.id }}">
+                Cancel
+              </button>
+            {% else %}
+              <button type="button" class="delete-pipeline-button warning" data-id="{{ run.id }}">
+                Delete
+              </button>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" class="muted">No pipeline runs yet.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p id="pipeline-message" class="message" style="display:none"></p>
+</section>
+
+<script>
+const message = document.getElementById("pipeline-message");
+
+function showMessage(text, isError = false) {
+  message.style.display = "block";
+  message.textContent = text;
+  message.classList.toggle("error", isError);
+}
+
+document.querySelectorAll(".cancel-pipeline-button").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const pipelineRunId = button.dataset.id;
+
+    const response = await fetch(`/api/pipelines/${pipelineRunId}/cancel/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": window.csrfToken,
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      showMessage("Failed to cancel pipeline: " + text, true);
+      return;
+    }
+
+    showMessage("Cancel requested.");
+    setTimeout(() => window.location.reload(), 1000);
+  });
+});
+
+document.querySelectorAll(".delete-pipeline-button").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const pipelineRunId = button.dataset.id;
+
+    const confirmed = window.confirm(
+      "Delete this pipeline run? This removes the run history, but not the datasets/files that were created."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const response = await fetch(`/api/pipelines/${pipelineRunId}/delete/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": window.csrfToken,
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      showMessage("Failed to delete pipeline run: " + text, true);
+      return;
+    }
+
+    showMessage("Pipeline run deleted.");
+    setTimeout(() => window.location.reload(), 500);
+  });
+});
+
+document.getElementById("delete-all-pipeline-runs")?.addEventListener("click", async () => {
+  const confirmed = window.confirm(
+    "Delete all pipeline runs? This removes the run history, but not the datasets/files that were created."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const response = await fetch("/api/pipelines/delete-all/", {
+    method: "DELETE",
+    headers: {
+      "X-CSRFToken": window.csrfToken,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    showMessage("Failed to delete pipeline runs: " + text, true);
+    return;
+  }
+
+  showMessage("Pipeline runs deleted.");
+  setTimeout(() => window.location.reload(), 500);
+});
+
+const hasRunningPipeline = Array.from(document.querySelectorAll(".pipeline-status"))
+  .some((el) => ["PENDING", "RUNNING"].includes(el.textContent.trim()));
+
+if (hasRunningPipeline) {
+  setTimeout(() => window.location.reload(), 3000);
+}
+</script>
+{% endblock %}
