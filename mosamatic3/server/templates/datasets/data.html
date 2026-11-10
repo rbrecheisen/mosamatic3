@@ -5,24 +5,22 @@
 </div>
 <section class="card">
   <h2>Upload files or folders</h2>
-  <p class="muted">
-    Each upload is stored as one dataset under the configured upload root.<br>
-    <br>
-    You can upload a maximum of 10000 files with a total size of max. 10GB. If your dataset is larger, split it up and upload in batches.<br>
-    <br>
-    If you upload multiple CT scans, choose the "Folder" upload button and make sure the folder you select contains only patient folders with CT images. For example, "abdomen/patient1",
-    "abdomen/patient2", etc. The CT images of one scan MUST be in a single folder but may be nested further down inside the patient folder.<br>
-    <br>
-    If you upload individual L3 images but these are stored in separate patient folders and possibly further nested down, please choose the "Folder" upload button and make sure
-    that the folder you select contains only patient folders. For example, "abdomen/patient1", "abdomen/patient2", etc. Once uploaded you can use the "Collect Single CT Images" task
-    to search for the individual L3 images and store them as a flat list in a new output dataset. The L3 image file names will be updated to indicate the patient they correspond to.
-    The output dataset can then be used to run the default body composition pipeline.<br>
-  </p>
+  <div class="data-upload-limits" role="note">
+    You can upload a maximum of <strong>10,000 files</strong> and <strong>10 GB of data</strong>.
+    If you have more, please split it into batches.
+  </div>
   <form id="upload-form" class="stack">
     {% csrf_token %}
     <label>Dataset name <input name="name" required></label>
-    <label>Files <input id="file-input" type="file" multiple></label>
-    <label>Folder <input id="folder-input" type="file" multiple webkitdirectory directory></label>
+    <div class="data-upload-field">
+      <label for="file-input">Select individual files</label>
+      <input id="file-input" type="file" multiple>
+    </div>
+    <div class="data-upload-field">
+      <label for="folder-input">Select main folder with CT scans</label>
+      <p class="data-folder-upload-warning">Use this upload field only to select a main folder containing separate patient folders with full CT scans.</p>
+      <input id="folder-input" type="file" multiple webkitdirectory directory>
+    </div>
     <button type="submit">Upload selected files/folder</button>
   </form>
   <p id="upload-message" class="message" style="display:none"></p>

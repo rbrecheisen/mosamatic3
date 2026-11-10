@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="button-row data-page-actions">
+  <a class="button-like secondary" href="{% url 'logs' %}">View Logs</a>
+</div>
+<section class="card">
+  <h2>Upload files or folders</h2>
+  <div class="data-upload-limits" role="note">
+    You can upload a maximum of <strong>10,000 files</strong> and <strong>10 GB of data</strong>.
+    If you have more, please split it into batches.
+  </div>
+  <form id="upload-form" class="stack">
+    {% csrf_token %}
+    <label>Dataset name <input name="name" required></label>
+    <div class="data-upload-field">
+      <label for="file-input">Select individual files</label>
+      <input id="file-input" type="file" multiple>
+    </div>
+    <div class="data-upload-field">
+      <label for="folder-input">Select main folder with CT scans</label>
+      <p class="data-folder-upload-warning">Use this upload field only to select a main folder containing separate patient folders with full CT scans.</p>
+      <input id="folder-input" type="file" multiple webkitdirectory directory>
+    </div>
+    <button type="submit">Upload selected files/folder</button>
+  </form>
+  <p id="upload-message" class="message" style="display:none"></p>
+</section>
+<section class="card">
+  <div class="section-title-row">
+    <h3>Input datasets</h3>{% if input_datasets %}<button id="delete-input" class="link-button danger-link">(delete
+      all)</button>{% endif %}
+  </div>
+  {% include 'partials/dataset_table.html' with datasets=input_datasets empty='No input datasets uploaded yet.' %}
+</section>
+<section class="card">
+  <div class="section-title-row">
+    <h3>Output results</h3>{% if output_datasets %}<button id="delete-output" class="link-button danger-link">(delete
+      all)</button>{% endif %}
+  </div>
+  {% include 'partials/dataset_table.html' with datasets=output_datasets empty=output_empty_message %}
+</section>
+<script>
+  const uploadForm = document.getElementById('upload-form');
+  const msg = document.getElementById('upload-message');
+  uploadForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    msg.style.display = 'block';
+
+    const fileInput = document.getElementById('file-input');
+    const folderInput = document.getElementById('folder-input');
+    const selectedFiles = [
+      ...Array.from(fileInput?.files || []),
+      ...Array.from(folderInput?.files || []),
+    ];
+
+    if (selectedFiles.length === 0) {
+      msg.textContent = 'Select at least one file or folder.';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', uploadForm.elements.name.value);
+    for (const file of selectedFiles) {
+      formData.append('files', file);
+      formData.append('relative_paths', file.webkitRelativePath || file.name);
+    }
+
+    msg.textContent = `Uploading ${selectedFiles.length} file(s)...`;
+    const response = await fetch('/api/datasets/', { method: 'POST', headers: { 'X-CSRFToken': window.csrfToken }, body: formData });
+    if (response.ok) location.reload(); else msg.textContent = await response.text();
+  });
+
+  document.getElementById('delete-input')?.addEventListener('click', async () => {
+    if (!confirm('Delete all input datasets? Output result datasets will be kept.')) return;
+    const response = await fetch('/api/datasets/input-datasets/', { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+    if (response.ok) location.reload(); else alert(await response.text());
+  });
+  
+  document.getElementById('delete-output')?.addEventListener('click', async () => {
+    if (!confirm('Delete all output result datasets? Input datasets will be kept.')) return;
+    const response = await fetch('/api/datasets/output-results/', { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+    if (response.ok) location.reload(); else alert(await response.text());
+  });
+
+  async function deleteDataset(id, name) {
+    if (!confirm(`Delete dataset "${name}"?`)) return;
+    const response = await fetch(`/api/datasets/${id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': window.csrfToken } });
+    if (response.ok) location.reload(); else alert(await response.text());
+  }
+</script>
+{% endblock %}

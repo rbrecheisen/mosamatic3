@@ -673,3 +673,26 @@ code {
 #task-message { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .message.error { background: #fff3f1; border-left-color: #b42318; color: #9f1c17; }
+
+/* Data page: upload guidance and file selection fields. */
+.data-upload-limits {
+  background: #fff4e5;
+  border: 1px solid #f6bd73;
+  border-radius: 12px;
+  color: #713f12;
+  line-height: 1.5;
+  padding: 0.9rem 1rem;
+  margin: 0 0 1.25rem;
+}
+
+.data-upload-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.data-folder-upload-warning {
+  margin: 0;
+  color: #b42318;
+  font-weight: 700;
+  line-height: 1.4;
+}
