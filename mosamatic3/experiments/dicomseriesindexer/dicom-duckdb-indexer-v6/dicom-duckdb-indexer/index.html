@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DICOM Series Indexer — DuckDB</title>
+  <style>
+    :root{color-scheme:light;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:#f3f6fa;color:#1b2c3a}
+    *{box-sizing:border-box}body{margin:0}header{background:#10263a;color:#fff;padding:19px max(26px,calc((100vw - 1300px)/2))}header h1{margin:0;font-size:23px;font-weight:650}header p{margin:2px 0 0;color:#bfcfde}
+    main{max-width:1350px;margin:auto;padding:20px 24px 50px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.span{grid-column:1/-1}
+    section{border:1px solid #dce3eb;border-radius:11px;background:#fff;padding:18px;min-width:0;box-shadow:0 2px 8px #142c4210}h2{margin:0 0 11px;font-size:16px}h3{margin:14px 0 5px;font-size:13px}p{margin:7px 0;color:#526171}
+    button,select,input,textarea{font:inherit}button{background:#176a9f;border:1px solid #176a9f;color:white;padding:8px 12px;border-radius:6px;cursor:pointer}button:hover:not(:disabled){background:#11527b}button.secondary{background:#fff;color:#205575;border-color:#b7c6d1}button.danger{color:#8a2929;border-color:#d7b9b9;background:#fff}button:disabled{opacity:.45;cursor:not-allowed}
+    input,select,textarea{padding:8px;border:1px solid #bfcbd5;border-radius:6px;background:#fff;color:#253949}input[type=text]{min-width:220px;max-width:100%}textarea{width:100%;min-height:140px;resize:vertical;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:9px 0}.muted{font-size:12px;color:#667887}.warn{border-left:3px solid #ba7e21;background:#fff9e9;padding:8px 11px;font-size:12px}
+    .status{font-size:12px;display:inline-block;padding:4px 9px;background:#e6eef7;color:#20577b;border-radius:15px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.metric{border:1px solid #e2e9ef;border-radius:7px;padding:9px;background:#fafcff}.metric strong{display:block;font-size:20px;font-variant-numeric:tabular-nums}.metric span{font-size:11px;color:#62717b}
+    progress{width:100%;height:11px;accent-color:#1b8e8a}pre{white-space:pre-wrap;overflow:auto;max-height:170px;font-size:12px;background:#f4f6f8;padding:9px;border-radius:6px;margin:8px 0}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row label{font-weight:550}.tablewrap{overflow:auto;max-height:430px;border:1px solid #dee6ed;border-radius:7px}table{border-collapse:collapse;table-layout:fixed;width:max-content;min-width:100%;font-size:12px}th,td{padding:6px 9px;border-bottom:1px solid #e6edf3;text-align:left;vertical-align:top;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}th{background:#eff4f8;position:sticky;top:0;z-index:1;user-select:none}td{font-variant-numeric:tabular-nums}tr.selected-row td{background:#e9f5fb}th.data-header{cursor:grab;padding-right:15px}th.data-header:active{cursor:grabbing}th.drag-over{background:#c8e0ef;outline:2px solid #176a9f;outline-offset:-2px}.sort-arrow{color:#176a9f;padding-left:4px}.col-resize{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:col-resize;z-index:3;border-right:2px solid transparent}.col-resize:hover{border-right-color:#176a9f}.selector-cell{position:sticky;left:0;width:39px;text-align:center!important;padding:5px!important;background:#fff;z-index:2}.selector-cell input{cursor:pointer;accent-color:#176a9f;width:15px;height:15px;margin:0}.selector-cell.head{background:#eff4f8;z-index:4}.pagination{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin:9px 0 0}.pagination .actions{margin:0}details{margin-top:8px}details summary{cursor:pointer;color:#176a9f}code{font-size:12px}a{color:#176a9f}@media(max-width:850px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.span{grid-column:auto}header{padding:14px 20px}}
+  </style>
+</head>
+<body>
+  <header><h1>DICOM Series Indexer <span style="font-size:13px;font-weight:400;color:#a8d8ed">DuckDB edition · v1.3</span></h1><p>Local DICOM / ZIP inventory · persistent SQL database · no patient data uploaded</p></header>
+  <main class="grid">
+    <section class="span">
+      <div class="row"><h2 style="margin:0;flex:1">Database and storage</h2><span id="db-status" class="status">Starting DuckDB…</span></div>
+      <div class="actions"><span id="storage">Checking storage…</span><button id="persist" class="secondary" disabled>Request durable storage</button><button id="backup" class="secondary" disabled>Back up database (.duckdb)</button><button id="restore" class="secondary" disabled>Restore database</button><input id="restore-file" type="file" accept=".duckdb" hidden></div>
+      <p class="muted">Database is stored in this browser’s Origin Private File System (OPFS). Use the same browser, profile, hostname and port on every visit. Export a backup before clearing site data.</p>
+    </section>
+    <section>
+      <h2>Collections and indexing</h2>
+      <div class="row"><label for="collections">Collection</label><select id="collections" style="flex:1;min-width:200px"></select><button id="refresh" class="secondary">Refresh</button></div>
+      <div class="actions"><input id="collection-name" type="text" placeholder="Name for a new collection" aria-label="New collection name"><button id="create" disabled>Create collection</button></div>
+      <div class="actions"><button id="pick" disabled>Choose root folder &amp; start / resume</button><button id="pause" class="secondary" disabled>Pause</button><button id="resume" class="secondary" disabled>Resume</button><button id="stop" class="danger" disabled>Stop</button></div>
+      <div class="actions"><label style="font-weight:500;cursor:pointer"><input type="checkbox" id="ignore-dicom-patient-id" checked disabled> Ignore PatientID in DICOM header</label></div>
+      <p class="muted">Checked (default): prefer <code>folder_patient_id</code>, with DICOM PatientID as a fallback. Unchecked: prefer DICOM PatientID, with the folder ID as a fallback. For one-patient ZIPs, <code>folder_patient_id</code> comes from the ZIP filename, not its scan folders. The option is saved per collection and applies to already indexed series.</p>
+      <p class="muted">Choose a root containing patient folders with nested scans, or ZIP archives with one patient's scans each. ZIP entries are read without unpacking the archives. If you close this tab, choose the same root again to resume. Pausing keeps committed batches in DuckDB.</p>
+      <div class="warn">Large datasets: allow sufficient browser quota; use local disks, not network mounts when possible. This indexes metadata without extracting pixel data. Uncompressed multi-terabyte datasets still require substantial I/O.</div>
+      <details><summary>Collection reset / reindex</summary><p>To detect changes in an already indexed folder, create a new collection. Resetting the selected collection removes only its local index and progress.</p><button id="reset" class="danger" disabled>Reset selected collection</button></details>
+    </section>
+    <section>
+      <h2>Indexing progress</h2>
+      <div class="row"><span id="job-status" class="status">Idle</span><span id="elapsed" class="muted"></span></div>
+      <progress id="progress" max="100" value="0"></progress>
+      <div class="metrics">
+        <div class="metric"><strong id="processed">0</strong><span>Files processed</span></div>
+        <div class="metric"><strong id="discovered">—</strong><span>Candidates discovered</span></div>
+        <div class="metric"><strong id="speed">—</strong><span>Files/second (active)</span></div>
+        <div class="metric"><strong id="eta">—</strong><span>Estimated time left</span></div>
+        <div class="metric"><strong id="series">—</strong><span>Unique DICOM series</span></div>
+        <div class="metric"><strong id="studies">—</strong><span>Studies</span></div>
+        <div class="metric"><strong id="duplicates">—</strong><span>Repeated SOP files</span></div>
+        <div class="metric"><strong id="errors">—</strong><span>Unreadable / invalid files</span></div>
+      </div>
+      <p class="muted" id="current">No folder selected.</p>
+      <pre id="log" aria-live="polite">Ready when DuckDB initializes.</pre>
+    </section>
+    <section class="span">
+      <div class="row"><h2 style="flex:1;margin:0">SQL query workspace</h2><select id="examples" aria-label="Example queries"><option value="series">All series</option><option value="axial">Axial CT candidates</option><option value="venous">Venous axial CT</option><option value="duplicates">Duplicate SOP sources</option><option value="studies">Studies</option><option value="files">Individual source paths</option><option value="performance">Performance by collection</option></select><button id="example" class="secondary" disabled>Load example</button></div>
+      <p class="muted">Tables: <code>collections</code>, <code>scan_units</code>, <code>dicom_files</code>; views: <code>dicom_series</code>, <code>dicom_instances</code>, <code>dicom_files_resolved</code>, <code>dicom_studies</code>, <code>duplicate_sources</code>. Use <code>series_folder_path</code> / <code>source_archive</code> for retrieval; ZIP entries have <code>!/</code> paths.</p>
+      <textarea id="sql" spellcheck="false" aria-label="SQL query"></textarea>
+      <div class="actions"><button id="run" disabled>Run SQL</button><button id="export" class="secondary" disabled>Export full query CSV</button><button id="export-selected" class="secondary" disabled>Export selected rows to CSV (0)</button><span class="muted" id="query-info">Browse results in 200-row pages; selections remain when changing pages or sorting.</span></div>
+      <div id="results" class="tablewrap"><p style="padding:14px">Run a query to see results.</p></div>
+      <div class="pagination"><div class="actions"><button id="prev-page" class="secondary" disabled>← Previous</button><span class="muted" id="page-label">No results yet</span><button id="next-page" class="secondary" disabled>Next →</button></div><div class="actions"><span class="muted" id="selection-info">0 rows selected</span><button id="clear-selection" class="secondary" disabled>Clear selection</button></div></div>
+      <p class="muted">Click a column heading to sort all query results; drag the heading to move the column; drag its right edge to resize it. Tick individual rows or the header checkbox to select the current page. Selected rows stay selected across pages and sorting; running a different SQL query clears the selection.</p>
+      <details><summary>Useful query / export notes</summary><p><code>number_of_instances</code> counts unique SOP instances; <code>number_of_frames</code> sums DICOM frames, which can exceed instances for multi-frame data. The <code>duplicate_sources</code> view lists every source occurrence for repeated SOP Instance UIDs. <code>scan_type</code> is the predominant image type; secondary counts and <code>scan_types_present</code> remain available.</p><p>Phase and delay are heuristic. Delay is computed using the mean slice acquisition timestamp minus ContrastBolusStartTime; ambiguous, absent, or implausible bolus values yield NULL. Neither series folders nor original ZIPs are copied into the database.</p></details>
+    </section>
+  </main>
+  <script type="module" src="./app.js?v=1.3"></script>
+</body>
+</html>
