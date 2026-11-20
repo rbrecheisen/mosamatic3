@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DICOM Series Indexer · Local only</title>
+<style>
+:root{color-scheme:light;--bg:#f4f7fa;--card:#fff;--ink:#1c2938;--muted:#647386;--border:#d9e1e9;--blue:#1765ac;--soft:#eaf3fc;--green:#18764f;--warn:#9c5b08;--danger:#a62a2a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.55 system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:var(--ink)}
+main{max-width:980px;margin:40px auto;padding:0 20px 40px}.eyebrow{font-size:12px;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:var(--blue)}
+h1{font-size:31px;letter-spacing:-.7px;margin:6px 0}header p{color:var(--muted);margin:0 0 28px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:22px;margin:17px 0;box-shadow:0 2px 8px #20354c09}
+h2{font-size:19px;margin:0 0 5px}.help{color:var(--muted);font-size:13px;margin:0 0 16px}
+.flex{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.space{justify-content:space-between}
+button{cursor:pointer;border:1px solid #b9cadb;background:white;color:var(--ink);font:600 13px system-ui;padding:10px 15px;border-radius:8px}
+button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}button:hover:enabled{filter:brightness(.96)}button:disabled{opacity:.42;cursor:not-allowed}
+label{font-size:13px;color:var(--ink)}input[type=checkbox]{accent-color:var(--blue);vertical-align:middle}
+.meta{font-size:13px;color:var(--muted);overflow-wrap:anywhere;margin:8px 0}.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-weight:650;font-size:12px;background:var(--soft);color:var(--blue)}
+.progress{background:#edf0f4;height:11px;border-radius:15px;overflow:hidden;margin:14px 0}
+.progress>div{background:var(--blue);height:100%;width:0%;transition:width .2s}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:12px 0}
+.stat{background:#f7f9fc;border:1px solid #e8ecf2;border-radius:10px;padding:12px}.stat strong{display:block;font-size:21px;font-variant-numeric:tabular-nums}.stat span{color:var(--muted);font-size:12px}
+#log{background:#0d1d2c;color:#c8d6e5;border-radius:10px;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;padding:11px 13px;max-height:200px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.notice{background:#fff9e9;border:1px solid #efd9ab;border-radius:10px;padding:11px 13px;font-size:13px;color:#7d510e;margin:13px 0}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;border-bottom:1px solid #e8ecf2;padding:8px}th{background:#f7f9fb}td{max-width:260px;overflow-wrap:anywhere}
+.preview{overflow:auto;max-height:290px;border:1px solid var(--border);border-radius:9px}
+footer{font-size:12px;color:var(--muted);margin:18px 0}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}main{margin:17px auto}.panel{padding:16px}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Clinical research tools · Offline indexer</div>
+    <h1>DICOM Series Indexer</h1>
+    <p>Build a patient / study / series inventory from folders and ZIP archives. All processing remains on this computer.</p>
+  </header>
+
+  <section class="panel">
+    <h2>1. Load</h2>
+    <p class="help">Choose one root folder containing DICOM images, ZIP archives, or both. Standard ZIP and ZIP64 are supported; nested archives, encrypted ZIPs and split archives are not.</p>
+    <div class="flex">
+      <button class="primary" id="loadBtn">Select root folder</button>
+      <button id="resumeSavedBtn" disabled>Resume saved index</button>
+      <label><input id="reindex" type="checkbox"> Re-index everything</label>
+    </div>
+    <div id="rootLabel" class="meta">No folder selected.</div>
+    <div class="notice"><strong>Privacy:</strong> Patient identifiers and dates can be personal health data. This file never transmits data, but downloaded CSVs and browser storage still require appropriate handling.</div>
+  </section>
+
+  <section class="panel">
+    <div class="flex space"><h2>2. Process</h2><span id="badge" class="pill">Idle</span></div>
+    <p class="help">DICOM metadata is read without decoding image pixels. Progress is committed locally after each file, so closing the page need not lose completed work. Re-index older saved collections to calculate mean acquisition times.</p>
+    <div id="stage" class="meta">Waiting for a root folder.</div>
+    <div class="progress" role="progressbar" aria-label="Processed files" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="bar"></div></div>
+    <div class="stats">
+      <div class="stat"><strong id="processed">0</strong><span>Entries processed</span></div>
+      <div class="stat"><strong id="total">–</strong><span>Entries discovered</span></div>
+      <div class="stat"><strong id="series">0</strong><span>DICOM series</span></div>
+      <div class="stat"><strong id="excluded">0</strong><span>Excluded images</span></div>
+      <div class="stat"><strong id="errors">0</strong><span>Skipped / errors</span></div>
+    </div>
+    <div class="flex" style="margin:15px 0">
+      <button id="pauseBtn" disabled>Pause</button>
+      <button id="continueBtn" disabled>Continue</button>
+      <button id="stopBtn" disabled>Stop</button>
+    </div>
+    <div id="log" aria-live="polite">Ready.</div>
+  </section>
+
+  <section class="panel">
+    <h2>3. Export</h2>
+    <p class="help">One row per DICOM series; locator, topogram, scout and MPR cor images are excluded. Postcontrast delay uses the mean acquisition time across available slices and the recorded DICOM bolus start time. Missing timestamps yield a blank delay.</p>
+    <div class="flex">
+      <button id="csvBtn">Download CSV</button>
+      <button id="previewBtn">Preview first 15 series</button>
+      <label><input type="checkbox" id="ctOnly"> CT only</label>
+    </div>
+    <div id="preview" class="preview" style="display:none;margin-top:15px"></div>
+  </section>
+  <footer>Requires a recent Chrome or Edge browser with directory access and persistent IndexedDB. Use the same browser/profile and page origin to resume; clearing site data also clears the saved index. For the most reliable storage, open this same file through localhost.</footer>
+</main>
+
+<script id="worker-code" type="text/plain">
+"use strict";
+const DB_NAME="dicom-series-indexer-v1", DB_VERSION=1, INDEX_SCHEMA_VERSION=2, HEADER_LIMIT=12*1024*1024;
+let db=null, active=false, paused=false, stopped=false, currentJob=null, lastUpdate=0;
+const decoder=new TextDecoder("utf-8"), numberFormat=new Intl.NumberFormat("en-US");
+const wanted=new Set(["00100020","0020000D","00200010","00080008","00080020","00080030","0008002A","00080022","00080032","00080021","00080031","0020000E","00200011","0008103E","00181030","00080060","00180050","00180088","00200037","00200032","00280010","00280011","00280030","00180010","00181042","00080018","00280008","00189074"]);
+
+function notify(type,data){self.postMessage(Object.assign({type:type},data||{}))}
+function log(msg){notify("log",{message:msg})}
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore("jobs",{keyPath:"id"});d.createObjectStore("processed",{keyPath:"key"});d.createObjectStore("sops",{keyPath:"key"});d.createObjectStore("series",{keyPath:"key"})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function req(r){return new Promise((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function transactionDone(t){return new Promise((resolve,reject)=>{t.oncomplete=()=>resolve();t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error||new Error("Transaction aborted"))})}
+async function putJob(){const t=db.transaction("jobs","readwrite");t.objectStore("jobs").put(currentJob);await transactionDone(t)}
+async function clearDatabase(){const t=db.transaction(["processed","sops","series"],"readwrite");for(const n of ["processed","sops","series"])t.objectStore(n).clear();await transactionDone(t)}
+function progress(force){const now=Date.now();if(!force && now-lastUpdate<300)return;lastUpdate=now;notify("progress",{stats:currentJob.stats,stage:currentJob.stage,current:currentJob.current||"",paused:paused})}
+async function pauseCheck(){while(paused&&!stopped)await new Promise(r=>setTimeout(r,130));if(stopped)throw new Error("STOPPED")}
+
+function lowerExt(name){return name.toLowerCase()}
+function candidateFile(name){const n=lowerExt(name);if(/\.(zip|7z|rar|tar|gz|png|jpg|jpeg|gif|pdf|csv|xlsx?|txt|json|xml|html?|js|md|log|db|ini|exe|ds_store)$/i.test(n))return false;return true}
+async function* walk(dir,prefix){for await(const item of dir.values()){await pauseCheck();const path=prefix?prefix+"/"+item.name:item.name;if(item.kind==="directory")yield* walk(item,path);else if(/\.zip$/i.test(item.name))yield{kind:"zip",handle:item,path:path};else if(candidateFile(item.name))yield{kind:"file",handle:item,path:path}}}
+
+const u16=(b,o)=>new DataView(b.buffer,b.byteOffset,b.byteLength).getUint16(o,true);
+const u32=(b,o)=>new DataView(b.buffer,b.byteOffset,b.byteLength).getUint32(o,true);
+function largeNum(view,off){const n=view.getBigUint64(off,true);if(n>BigInt(Number.MAX_SAFE_INTEGER))throw new Error("ZIP offset exceeds safe JavaScript integer");return Number(n)}
+async function range(blob,start,end){return new Uint8Array(await blob.slice(start,end).arrayBuffer())}
+async function zipInfo(blob){
+  const tail=await range(blob,Math.max(0,blob.size-66000),blob.size),base=blob.size-tail.length;
+  let p=-1;for(let i=tail.length-22;i>=0;i--){if(u32(tail,i)===0x06054b50&&i+22+u16(tail,i+20)<=tail.length){p=i;break}}
+  if(p<0)throw new Error("ZIP end-of-central-directory not found");
+  let count=u16(tail,p+10),size=u32(tail,p+12),offset=u32(tail,p+16);
+  if(u16(tail,p+4)!==0||u16(tail,p+6)!==0)throw new Error("Multipart ZIP archives are not supported");
+  if(count===65535||size===0xffffffff||offset===0xffffffff){
+    const locator=await range(blob,base+p-20,base+p);
+    if(locator.length!==20||u32(locator,0)!==0x07064b50)throw new Error("Invalid ZIP64 locator");
+    const view=new DataView(locator.buffer,locator.byteOffset,locator.byteLength);
+    const zoff=largeNum(view,8),rec=await range(blob,zoff,zoff+56);
+    if(u32(rec,0)!==0x06064b50)throw new Error("Invalid ZIP64 record");
+    const v=new DataView(rec.buffer,rec.byteOffset,rec.byteLength);
+    count=largeNum(v,32);size=largeNum(v,40);offset=largeNum(v,48);
+  }
+  if(offset+size>blob.size)throw new Error("ZIP central directory points beyond file");
+  return {count:count,size:size,offset:offset}
+}
+function extraZip64(extra,rawUncomp,rawComp,rawOffset){
+  let uncomp=rawUncomp,comp=rawComp,offset=rawOffset;
+  for(let p=0;p+4<=extra.length;){const kind=u16(extra,p),len=u16(extra,p+2);p+=4;if(p+len>extra.length)break;
+    if(kind===1){const view=new DataView(extra.buffer,extra.byteOffset+p,len);let q=0;
+      if(uncomp===0xffffffff){uncomp=largeNum(view,q);q+=8}
+      if(comp===0xffffffff){comp=largeNum(view,q);q+=8}
+      if(offset===0xffffffff){offset=largeNum(view,q);q+=8}
+      break
+    }p+=len}
+  if(uncomp===0xffffffff||comp===0xffffffff||offset===0xffffffff)throw new Error("Incomplete ZIP64 metadata");
+  return {uncomp:uncomp,comp:comp,offset:offset}
+}
+async function* zipEntries(blob){
+  const info=await zipInfo(blob);let cursor=info.offset, cache=new Uint8Array(0),cacheBase=-1;
+  async function readAt(pos,len){
+    if(pos>=cacheBase&&pos+len<=cacheBase+cache.length)return cache.subarray(pos-cacheBase,pos-cacheBase+len);
+    cacheBase=pos;cache=await range(blob,pos,Math.min(blob.size,pos+Math.max(262144,len)));
+    if(cache.length<len)throw new Error("Truncated central directory");
+    return cache.subarray(0,len)
+  }
+  for(let i=0;i<info.count;i++){
+    await pauseCheck();const h=await readAt(cursor,46);
+    if(u32(h,0)!==0x02014b50)throw new Error("Invalid ZIP central directory entry "+i);
+    const flags=u16(h,8),method=u16(h,10),comp=u32(h,20),uncomp=u32(h,24),nlen=u16(h,28),elen=u16(h,30),clen=u16(h,32),off=u32(h,42);
+    const variable=await readAt(cursor+46,nlen+elen);
+    const name=decoder.decode(variable.subarray(0,nlen));
+    const z=extraZip64(variable.subarray(nlen),uncomp,comp,off);
+    cursor+=46+nlen+elen+clen;
+    if(name.endsWith("/")||!candidateFile(name))continue;
+    yield {name:name,index:i,method:method,flags:flags,compressed:z.comp,uncompressed:z.uncomp,offset:z.offset}
+  }
+}
+async function zipEntryStream(blob,entry){
+  const h=await range(blob,entry.offset,entry.offset+30);
+  if(h.length<30||u32(h,0)!==0x04034b50)throw new Error("Invalid local ZIP entry");
+  const start=entry.offset+30+u16(h,26)+u16(h,28);
+  if(start+entry.compressed>blob.size)throw new Error("ZIP entry extends beyond archive");
+  if(entry.flags&1)throw new Error("Encrypted ZIP entry is unsupported");
+  const part=blob.slice(start,start+entry.compressed);
+  if(entry.method===0)return part.stream();
+  if(entry.method===8)return part.stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  throw new Error("Unsupported ZIP compression method "+entry.method)
+}
+
+class NeedMore extends Error{}
+function dicomParse(bytes,atEOF){
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),n=bytes.length;
+  function ensure(pos,len){if(pos+len>n)throw new NeedMore()}
+  function read16(pos,little){ensure(pos,2);return view.getUint16(pos,little)}
+  function read32(pos,little){ensure(pos,4);return view.getUint32(pos,little)}
+  function tag(pos,little){return read16(pos,little).toString(16).toUpperCase().padStart(4,"0")+read16(pos+2,little).toString(16).toUpperCase().padStart(4,"0")}
+  function valueOf(pos,len,vr,little){if(len===0)return "";ensure(pos,len);
+    if(vr==="US"&&len===2)return String(read16(pos,little));
+    if(vr==="SS"&&len===2)return String(view.getInt16(pos,little));
+    if(vr==="UL"&&len===4)return String(read32(pos,little));
+    if(len>2048)return "";
+    return decoder.decode(bytes.subarray(pos,pos+len)).replace(/\0/g,"").trim()
+  }
+  const fields={},warnings=[];let p=0,explicit=true,little=true,hasMagic=false,steps=0,gotPixel=false,earlyEnhanced=false;
+  try{
+    hasMagic=n>=132&&bytes[128]===68&&bytes[129]===73&&bytes[130]===67&&bytes[131]===77;
+    p=hasMagic?132:0;ensure(p,8);
+    if(!hasMagic){const g=read16(0,true);if(g!==2&&g!==8&&g!==16&&g!==24&&g!==32&&g!==40) return {status:"invalid"}}
+    if(tag(p,true).startsWith("0002")){
+      while(true){ensure(p,8);const t=tag(p,true);if(!t.startsWith("0002"))break;
+        const vr=String.fromCharCode(bytes[p+4],bytes[p+5]);let len=0,head=8;
+        if(["OB","OD","OF","OL","OV","OW","SQ","UC","UR","UT","UN","SV","UV"].includes(vr)){ensure(p,12);len=read32(p+8,true);head=12}else len=read16(p+6,true);
+        if(t==="00020010")fields.transfer_syntax=valueOf(p+head,len,vr,true);
+        p+=head+len;ensure(Math.min(p,n),0);
+      }
+    }else if(!hasMagic){const vr=String.fromCharCode(bytes[p+4],bytes[p+5]);explicit=/^[A-Z]{2}$/.test(vr)}
+    const ts=fields.transfer_syntax||"";
+    if(ts==="1.2.840.10008.1.2"){explicit=false;little=true}
+    else if(ts==="1.2.840.10008.1.2.2"){explicit=true;little=false}
+    else if(ts==="1.2.840.10008.1.2.1.99")return {status:"unsupported",reason:"Deflated DICOM transfer syntax is not supported",fields:fields};
+    function parseHeader(pos){ensure(pos,8);const t=tag(pos,little);let vr="UN",length,head=8;
+      if(t.startsWith("FFFE")){length=read32(pos+4,little);return {tag:t,vr:"ITEM",length:length,head:8}}
+      if(explicit){vr=String.fromCharCode(bytes[pos+4],bytes[pos+5]);
+        if(!/^[A-Z]{2}$/.test(vr))throw new Error("Invalid DICOM VR at offset "+pos);
+        if(["OB","OD","OF","OL","OV","OW","SQ","UC","UR","UT","UN","SV","UV"].includes(vr)){ensure(pos,12);length=read32(pos+8,little);head=12}
+        else length=read16(pos+6,little);
+      }else length=read32(pos+4,little);
+      return {tag:t,vr:vr,length:length,head:head}
+    }
+    function scan(start,end,depth,insideFunctional){
+      let q=start;
+      while(q<end){
+        if(++steps>250000)throw new Error("Excessive DICOM element count");
+        const h=parseHeader(q),vpos=q+h.head;
+        if(h.tag==="7FE00010"||h.tag==="7FE00008"||h.tag==="7FE00009"){gotPixel=true;return {pos:vpos,done:true}}
+        if(h.tag==="FFFEE0DD"||h.tag==="FFFEE00D")return {pos:vpos,done:false};
+        if(h.tag==="FFFEE000"){const next=h.length===0xffffffff?scan(vpos,end,depth+1,insideFunctional):scan(vpos,vpos+h.length,depth+1,insideFunctional);q=h.length===0xffffffff?next.pos:vpos+h.length;continue}
+        if(wanted.has(h.tag)&&h.length!==0xffffffff &&(!insideFunctional||!fields[h.tag])){
+          const numeric=h.tag==="00280010"||h.tag==="00280011";
+          fields[h.tag]=valueOf(vpos,h.length,numeric?"US":h.vr,little);
+        }
+        if(h.tag==="52009229"||h.tag==="52009230"){
+          earlyEnhanced=true;warnings.push("Enhanced multiframe functional groups detected; first-frame values only");
+          const nested=scan(vpos,h.length===0xffffffff?Number.POSITIVE_INFINITY:vpos+h.length,depth+1,true);
+          return {pos:nested.pos,done:true}
+        }
+        if(h.vr==="SQ"||h.length===0xffffffff){
+          if(h.length===0xffffffff || (insideFunctional&&depth<12)){
+            const nested=scan(vpos,h.length===0xffffffff?end:vpos+h.length,depth+1,insideFunctional);
+            q=h.length===0xffffffff?nested.pos:vpos+h.length
+          }else q=vpos+h.length;
+        }else q=vpos+h.length;
+        if(q>n)throw new NeedMore();
+      }
+      return {pos:q,done:false}
+    }
+    scan(p,Number.POSITIVE_INFINITY,0,false);
+    return {status:"done",fields:fields,warnings:warnings}
+  }catch(e){
+    if(e instanceof NeedMore)return {status:atEOF?"partial":"need_more",fields:fields,warnings:warnings};
+    if(gotPixel||earlyEnhanced)return {status:"done",fields:fields,warnings:warnings};
+    return {status:"invalid",reason:e.message,fields:fields,warnings:warnings}
+  }
+}
+async function parseBlob(blob){
+  let size=Math.min(blob.size,262144),last=null;
+  while(true){await pauseCheck();const bytes=await range(blob,0,size);last=dicomParse(bytes,size===blob.size);
+    if(last.status!=="need_more")return last;
+    if(size>=HEADER_LIMIT||size>=blob.size)return {status:"partial",fields:last.fields,warnings:(last.warnings||[]).concat("Metadata exceeds read limit")};
+    size=Math.min(blob.size,HEADER_LIMIT,size*2);
+  }
+}
+async function parseStream(stream){
+  const reader=stream.getReader();let capacity=262144,used=0,bytes=new Uint8Array(capacity),result=null;
+  try{while(true){await pauseCheck();const part=await reader.read();
+      if(part.done){result=dicomParse(bytes.subarray(0,used),true);break}
+      if(used>=HEADER_LIMIT){result={status:"partial",fields:dicomParse(bytes.subarray(0,used),true).fields||{},warnings:["Metadata exceeds read limit"]};break}
+      const take=Math.min(part.value.length,HEADER_LIMIT-used);
+      while(used+take>capacity){capacity=Math.min(HEADER_LIMIT,capacity*2);const b=new Uint8Array(capacity);b.set(bytes.subarray(0,used));bytes=b}
+      bytes.set(part.value.subarray(0,take),used);used+=take;
+      result=dicomParse(bytes.subarray(0,used),false);
+      if(result.status!=="need_more")break;
+    }}finally{try{await reader.cancel()}catch(_){/* stream already finished */}}
+  return result||{status:"invalid",reason:"Empty ZIP entry"}
+}
+
+function datePart(x){const s=String(x||"");return /^\d{8}$/.test(s)?s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6,8):""}
+function timePart(x){const s=String(x||"");if(!/^\d{2,6}(?:\.\d+)?$/.test(s))return "";return s.slice(0,2)+":"+s.slice(2,4).padEnd(2,"0")+":"+s.slice(4,6).padEnd(2,"0")+(s.includes(".")?s.slice(s.indexOf(".")):"")}
+function dateTimePart(x){const s=String(x||"");return s.length>=8?datePart(s.slice(0,8))+(s.length>8?" "+timePart(s.slice(8,14)+s.slice(14).replace(/[+-]\d{4}$/,"")):""):""}
+function acquisition(f){return dateTimePart(f["0008002A"])||((datePart(f["00080022"])||datePart(f["00080021"]))+" "+(timePart(f["00080032"])||timePart(f["00080031"]))).trim()}
+function actualAcquisition(f){
+  const combined=dateTimePart(f["0008002A"]);
+  if(combined.includes(" ")&&combined.slice(11))return combined;
+  const date=datePart(f["00080022"]),time=timePart(f["00080032"]);
+  return date&&time?date+" "+time:""
+}
+function acquisitionMilliseconds(datetime){
+  const m=String(datetime||"").match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?$/);
+  if(!m)return null;
+  const values=m.slice(1,7).map(Number),ms=Number(((m[7]||"")+"000").slice(0,3));
+  const epoch=Date.UTC(values[0],values[1]-1,values[2],values[3],values[4],values[5],ms);
+  if(!Number.isFinite(epoch))return null;
+  const d=new Date(epoch);
+  if(d.getUTCFullYear()!==values[0]||d.getUTCMonth()+1!==values[1]||d.getUTCDate()!==values[2])return null;
+  return epoch
+}
+function localDateTime(epoch){
+  if(!Number.isFinite(epoch))return "";
+  const iso=new Date(Math.round(epoch)).toISOString().replace("T"," ").replace("Z","");
+  return iso.replace(/\.000$/,"")
+}
+function orientation(raw){if(!raw)return "unknown";const a=raw.split("\\").map(Number);if(a.length!==6||a.some(n=>!Number.isFinite(n)))return "unknown";
+  const x=a[1]*a[5]-a[2]*a[4],y=a[2]*a[3]-a[0]*a[5],z=a[0]*a[4]-a[1]*a[3],r=Math.hypot(x,y,z)||1;
+  if(Math.abs(z/r)>0.95)return "axial";if(Math.abs(x/r)>0.95)return "sagittal";if(Math.abs(y/r)>0.95)return "coronal";return "oblique"
+}
+function secondsFromTime(s){const m=String(s||"").match(/^(\d{2}):?(\d{2})(?::?(\d{2}(?:\.\d+)?))?/);return m?Number(m[1])*3600+Number(m[2])*60+Number(m[3]||0):null}
+function phaseFromSeconds(seconds){if(seconds<0||seconds>900)return null;
+  if(seconds<=35)return {phase:"arterial",conf:"low"};
+  if(seconds<=50)return {phase:"arterial",conf:"low"};
+  if(seconds>=55&&seconds<=105)return {phase:"portal_venous",conf:seconds>=65?"medium":"low"};
+  if(seconds>=180)return {phase:"delayed",conf:"low"};
+  return null
+}
+function estimatePhase(f,path){
+  const desc=(f["0008103E"]||"")+" "+(f["00181030"]||"");
+  const src=(desc+" "+path).toLowerCase(), result={phase:"unknown",confidence:"unknown",evidence:"No reliable phase indicator",delay:"",conflict:""};
+  const patterns=[
+    ["non_contrast",/(?:^|[^a-z])(?:non.?contrast|without.?contrast|unenhanced|native|blanco|zonder.?contrast|sans.?iv|pre.?contrast|no.?iv)(?:$|[^a-z])/i],
+    ["portal_venous",/(?:^|[^a-z])(?:portal.?venous|portaal.?veneus|portaal|portalphase|venous.?phase|veneuze.?fase|venous|veneus|pv.?phase|v.?phase|pv)(?:$|[^a-z])/i],
+    ["arterial",/(?:^|[^a-z])(?:arterial|arterieel|arterialphase|arteriele|art.?phase|artery.?phase)(?:$|[^a-z])/i],
+    ["delayed",/(?:^|[^a-z])(?:delayed|delay.?phase|equilibrium|late.?phase|uitgesteld|latevenous)(?:$|[^a-z])/i]
+  ];
+  const tagMatches=patterns.filter(x=>x[1].test(desc)), folderMatches=patterns.filter(x=>x[1].test(path));
+  if(tagMatches.length){result.phase=tagMatches[0][0];result.confidence="high";result.evidence="SeriesDescription/ProtocolName: "+desc.trim()}
+  else if(folderMatches.length){result.phase=folderMatches[0][0];result.confidence="medium";result.evidence="Folder/ZIP path: "+path}
+  if(new Set(tagMatches.concat(folderMatches).map(x=>x[0])).size>1)result.conflict="Conflicting phase keywords";
+  const timing=(desc+" "+path).match(/(?:^|[^a-z0-9])(\d{1,3})\s*(?:s|sec|secs|seconds|sek|seconden)(?=$|[^a-z])/i);
+  let delay=timing?Number(timing[1]):null,origin=timing?"Folder/description timing":"";
+  const bolus=secondsFromTime(f["00181042"]),acq=secondsFromTime(f["00080032"]||(f["0008002A"]||"").slice(8,14));
+  if(bolus!==null&&acq!==null){let d=acq-bolus;if(d< -12*3600)d+=86400;if(d>=0&&d<=900){if(delay!==null&&Math.abs(delay-d)>20)result.conflict+=(result.conflict?"; ":"")+"Folder timing differs from bolus-to-acquisition time";delay=d;origin="DICOM bolus-to-acquisition time"}}
+  if(delay!==null){result.delay=String(delay);const guess=phaseFromSeconds(delay);
+    if(guess){if(result.phase==="unknown"){result.phase=guess.phase;result.confidence=guess.conf;result.evidence=origin+": "+delay+"s (timing-only estimate)"}
+      else if(guess.phase!==result.phase)result.conflict+=(result.conflict?"; ":"")+"Timing suggests "+guess.phase;
+      else result.evidence+="; "+origin+": "+delay+"s"
+    }else if(result.phase==="unknown")result.evidence=origin+": "+delay+"s; phase uncertain"
+  }
+  if(result.phase==="unknown"&&f["00180010"])result.evidence+="; contrast agent recorded (phase unknown)";
+  return result
+}
+function makeInfo(p,path,archive){
+  const f=p.fields||{},study=f["0020000D"]||"",series=f["0020000E"]||"";
+  if(!study||!series)return {invalid:true,reason:"Missing Study/Series Instance UID"};
+  const dt=acquisition(f),actualDt=actualAcquisition(f),ph=estimatePhase(f,path);
+  return {patient:f["00100020"]||"",study:study,studyId:f["00200010"]||"",studyDate:datePart(f["00080020"]),studyTime:timePart(f["00080030"]),
+    acq:dt,acqMs:acquisitionMilliseconds(actualDt),bolusStart:timePart(f["00181042"]),imageType:f["00080008"]||"",
+    series:series,seriesNum:f["00200011"]||"",desc:f["0008103E"]||"",protocol:f["00181030"]||"",modality:f["00080060"]||"",
+    thickness:f["00180050"]||"",spacingTag:f["00180088"]||"",orientation:orientation(f["00200037"]),rows:f["00280010"]||"",cols:f["00280011"]||"",
+    pixelSpacing:f["00280030"]||"",contrast:f["00180010"]||"",sop:f["00080018"]||"",frames:Math.max(1,Math.min(1000000,Number(f["00280008"]||1)||1)),
+    position:f["00200032"]||"",path:path,archive:archive||"",phase:ph,parseWarnings:p.warnings||[],status:p.status}
+}
+function excludeReason(i){
+  const description=[i.desc,i.protocol,i.imageType].join(" ");
+  if(/(?:^|[^a-z])(?:locator|localizer|topogram|scout)(?:$|[^a-z])/i.test(description))return "Scout/locator/topogram image";
+  if(/(?:^|[^a-z])mpr[\s_-]*cor(?:onal)?(?:$|[^a-z])/i.test(description))return "MPR coronal reconstruction";
+  const dir=i.path.slice(0,i.path.lastIndexOf("/"));
+  if(/(?:^|[\/!])(?:locator|localizer|topogram|scout)(?:[\/!]|$)/i.test(dir))return "Scout/locator/topogram folder";
+  if(/(?:^|[\/!])mpr[\s_-]*cor(?:onal)?(?:[\/!]|$)/i.test(dir))return "MPR coronal folder";
+  return ""
+}
+function first(a,b){return a||b||""}
+function distinctPush(a,x,limit){if(x&&!a.includes(x)&&a.length<limit)a.push(x)}
+function newSeries(key,i){return {key:key,patient:i.patient,study:i.study,studyId:i.studyId,studyDate:i.studyDate,studyTime:i.studyTime,series:i.series,seriesNum:i.seriesNum,
+  desc:i.desc,protocol:i.protocol,modality:i.modality,acqFirst:i.acq,acqLast:i.acq,acqMeanMs:null,acqCount:0,
+  meanAcquisitionDateTime:"",bolusCounts:{},contrastBolusStartTime:"",postcontrastDelaySeconds:"",
+  thicknesses:[],spacingTags:[],orientations:[],dimensions:[],pixelSpacings:[],
+  contrast:i.contrast,paths:[],archives:[],nInstances:0,nFrames:0,phaseVotes:{},phaseReasons:{},phaseConf:{},delays:[],
+  positions:[],warn:[]}}
+function refreshSeriesTiming(s){
+  s.meanAcquisitionDateTime=s.acqCount?localDateTime(s.acqMeanMs):"";
+  const bolusValues=Object.entries(s.bolusCounts).sort((a,b)=>b[1]-a[1]);
+  s.contrastBolusStartTime=bolusValues.length?bolusValues[0][0]:"";
+  s.postcontrastDelaySeconds="";
+  if(bolusValues.length>1)distinctPush(s.warn,"Different contrast bolus start times within series",20);
+  if(!s.acqCount||!s.contrastBolusStartTime)return;
+  const acq=new Date(s.acqMeanMs),acqSeconds=acq.getUTCHours()*3600+acq.getUTCMinutes()*60+acq.getUTCSeconds()+acq.getUTCMilliseconds()/1000;
+  const bolusSeconds=secondsFromTime(s.contrastBolusStartTime);
+  if(bolusSeconds===null)return;
+  let delta=acqSeconds-bolusSeconds;
+  if(delta<0)delta+=86400;
+  if(delta>=0&&delta<=900)s.postcontrastDelaySeconds=Number(delta.toFixed(1));
+  else distinctPush(s.warn,"Bolus-to-mean-acquisition delay outside 0–900 seconds",20);
+}
+function mergeSeries(s,i){s.patient=first(s.patient,i.patient);s.studyId=first(s.studyId,i.studyId);s.studyDate=first(s.studyDate,i.studyDate);s.studyTime=first(s.studyTime,i.studyTime);
+  if(s.patient&&i.patient&&s.patient!==i.patient)distinctPush(s.warn,"Conflicting Patient IDs within one Study/Series UID",20);
+  s.seriesNum=first(s.seriesNum,i.seriesNum);s.desc=first(s.desc,i.desc);s.protocol=first(s.protocol,i.protocol);s.modality=first(s.modality,i.modality);s.contrast=first(s.contrast,i.contrast);
+  if(i.acq){if(!s.acqFirst||i.acq<s.acqFirst)s.acqFirst=i.acq;if(!s.acqLast||i.acq>s.acqLast)s.acqLast=i.acq}
+  distinctPush(s.thicknesses,i.thickness,20);distinctPush(s.spacingTags,i.spacingTag,20);distinctPush(s.orientations,i.orientation,8);
+  distinctPush(s.dimensions,i.rows&&i.cols?i.rows+"x"+i.cols:"",12);distinctPush(s.pixelSpacings,i.pixelSpacing,20);
+  distinctPush(s.paths,i.path.includes("/")?i.path.slice(0,i.path.lastIndexOf("/")):"(root)",50);distinctPush(s.archives,i.archive,50);
+  s.nInstances++;s.nFrames+=i.frames;
+  if(i.acqMs!==null){
+    s.acqCount++;
+    s.acqMeanMs=s.acqMeanMs===null?i.acqMs:s.acqMeanMs+(i.acqMs-s.acqMeanMs)/s.acqCount;
+  }
+  if(i.bolusStart)s.bolusCounts[i.bolusStart]=(s.bolusCounts[i.bolusStart]||0)+1;
+  const phase=i.phase.phase;s.phaseVotes[phase]=(s.phaseVotes[phase]||0)+1;s.phaseReasons[phase]=i.phase.evidence;s.phaseConf[phase]=i.phase.confidence;
+  distinctPush(s.delays,i.phase.delay,30);
+  if(i.phase.conflict)distinctPush(s.warn,i.phase.conflict,20);
+  for(const w of i.parseWarnings)distinctPush(s.warn,w,20);
+  if(i.status==="partial")distinctPush(s.warn,"Some DICOM metadata could not be fully read",20);
+  if(i.position&&s.positions.length<256)distinctPush(s.positions,i.position,256);
+  if(s.thicknesses.length>1)distinctPush(s.warn,"Multiple slice thickness values",20);
+  if(s.orientations.filter(x=>x!=="unknown").length>1)distinctPush(s.warn,"Multiple orientations",20);
+  if(s.dimensions.length>1)distinctPush(s.warn,"Multiple image dimensions",20);
+  refreshSeriesTiming(s);
+  return s
+}
+function joinKey(i){return currentJob.id+"|"+i.study+"|"+i.series}
+function fileKey(type,path,entry){return currentJob.id+"|"+type+"|"+path+(entry?"|"+entry.index+"|"+entry.name:"")}
+async function alreadyDone(key,fingerprint){return await req(db.transaction("processed").objectStore("processed").get(key))}
+async function commit(key,fingerprint,info,error){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["processed","sops","series","jobs"],"readwrite");
+    const proc=tx.objectStore("processed"),sops=tx.objectStore("sops"),series=tx.objectStore("series"),jobs=tx.objectStore("jobs");
+    let result="processed",pStatus=error?"error":"ok";
+    const seen=proc.get(key);
+    seen.onsuccess=()=>{
+      if(seen.result){result="skip";return}
+      if(!info||info.invalid){pStatus="error";writeFinished();return}
+      if(info.excluded){pStatus="excluded";writeFinished();return}
+      const sopKey=info.sop?currentJob.id+"|"+info.sop:"";
+      if(!sopKey){updateSeries();return}
+      const sopReq=sops.get(sopKey);
+      sopReq.onsuccess=()=>{if(sopReq.result){pStatus="duplicate";writeFinished()}else{sops.put({key:sopKey});updateSeries()}};
+    };
+    function updateSeries(){const skey=joinKey(info),r=series.get(skey);
+      r.onsuccess=()=>{let obj=r.result;if(!obj){obj=newSeries(skey,info);currentJob.stats.series++}
+        mergeSeries(obj,info);series.put(obj);writeFinished()}
+    }
+    function writeFinished(){
+      proc.put({key:key,fingerprint:fingerprint,status:pStatus});
+      currentJob.stats.processed++;
+      if(pStatus==="error")currentJob.stats.errors++;
+      if(pStatus==="duplicate")currentJob.stats.duplicates++;
+      if(pStatus==="excluded")currentJob.stats.excluded++;
+      jobs.put(currentJob)
+    }
+    tx.oncomplete=()=>resolve(result);
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error||new Error("commit failed"));
+  })
+}
+async function processOne(key,fingerprint,source,label){
+  await pauseCheck();const done=await alreadyDone(key,fingerprint);
+  if(done){if(done.fingerprint!==fingerprint){currentJob.stats.changed++;if(currentJob.stats.changed<=5)log("Changed source requires re-index: "+label)}return}
+  let parsed=null,info=null,error="";
+  try{parsed=await source();if(parsed.status==="invalid"||parsed.status==="unsupported"){error=parsed.reason||"Not a DICOM file";info={invalid:true,reason:error}}
+    else {info=makeInfo(parsed,label,currentJob.currentArchive||"");if(info.invalid)error=info.reason;
+      else {const why=excludeReason(info);if(why)info={excluded:true,reason:why}}}
+  }catch(e){error=e.message;info={invalid:true,reason:error}}
+  if(error&&currentJob.stats.errors<30)log("Skipped "+label+": "+error);
+  await commit(key,fingerprint,info,error);progress(false)
+}
+async function countAll(root){let total=0;for await(const item of walk(root,"")){await pauseCheck();
+    if(item.kind==="file"){total++;continue}
+    try{const blob=await item.handle.getFile();for await(const e of zipEntries(blob))total++}
+    catch(e){total++;log("ZIP inspection warning: "+item.path+": "+e.message)}
+    currentJob.stage="Discovering";currentJob.current=item.path;progress(false);
+  }return total
+}
+async function run(root,reindex,rootName){
+  if(active)return;active=true;stopped=false;paused=false;db=db||await openDB();
+  let job=await req(db.transaction("jobs").objectStore("jobs").get("active"));
+  if(reindex){await clearDatabase();job=null}
+  if(!job){job={id:"active",schemaVersion:INDEX_SCHEMA_VERSION,rootName:rootName,rootHandle:root,stage:"Starting",current:"",currentArchive:"",stats:{processed:0,total:0,series:0,excluded:0,errors:0,duplicates:0,changed:0}}}
+  else if(job.rootName!==rootName){throw new Error("A different root is already indexed. Select Re-index everything to replace it.")}
+  else if(job.schemaVersion!==INDEX_SCHEMA_VERSION){throw new Error("Saved index uses an older metadata format. Select Re-index everything to calculate the new timestamps.")}
+  currentJob=job;currentJob.rootHandle=root;await putJob();progress(true);
+  try{
+    if(!currentJob.stats.total||reindex){currentJob.stage="Discovering";log("Discovering DICOM candidates and ZIP entries…");progress(true);
+      currentJob.stats.total=await countAll(root);await putJob()}
+    log("Indexing "+numberFormat.format(currentJob.stats.total)+" candidates.");
+    currentJob.stage="Indexing";progress(true);
+    for await(const item of walk(root,"")){
+      await pauseCheck();currentJob.current=item.path;currentJob.currentArchive="";const blob=await item.handle.getFile();
+      const fingerprint=blob.size+"|"+blob.lastModified;
+      if(item.kind==="file"){await processOne(fileKey("f",item.path),fingerprint,()=>parseBlob(blob),item.path);continue}
+      currentJob.currentArchive=item.path;
+      try{
+        for await(const entry of zipEntries(blob)){
+          await pauseCheck();const key=fileKey("z",item.path,entry),fullPath=item.path+"!/"+entry.name;
+          await processOne(key,fingerprint,async()=>parseStream(await zipEntryStream(blob,entry)),fullPath);
+        }
+      }catch(e){
+        log("ZIP failed "+item.path+": "+e.message);
+        await processOne(fileKey("badzip",item.path),fingerprint,async()=>{throw e},item.path);
+        progress(true)
+      }
+      currentJob.currentArchive="";
+    }
+    currentJob.stage="Complete";log("Index complete. Download the CSV to inspect all "+numberFormat.format(currentJob.stats.series)+" series.");
+  }catch(e){currentJob.stage=e.message==="STOPPED"?"Stopped":"Failed";if(e.message!=="STOPPED")log("ERROR: "+e.message)}
+  finally{await putJob();progress(true);active=false;notify("finished",{stage:currentJob.stage})}
+}
+self.onmessage=async ev=>{
+  const m=ev.data;
+  if(m.command==="pause"){paused=true;if(currentJob){currentJob.stage="Paused";progress(true)}}
+  else if(m.command==="resume"){paused=false;if(currentJob){currentJob.stage="Indexing";progress(true)}}
+  else if(m.command==="stop"){stopped=true;paused=false}
+  else if(m.command==="start"){
+    try{await run(m.root,m.reindex,m.rootName)}
+    catch(e){active=false;log("ERROR: "+e.message);notify("finished",{stage:"Failed"})}
+  }
+};
+</script>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const view={load:el("loadBtn"),resumeSaved:el("resumeSavedBtn"),reindex:el("reindex"),root:el("rootLabel"),
+  stage:el("stage"),badge:el("badge"),bar:el("bar"),processed:el("processed"),total:el("total"),
+  series:el("series"),excluded:el("excluded"),errors:el("errors"),pause:el("pauseBtn"),resume:el("continueBtn"),
+  stop:el("stopBtn"),log:el("log"),csv:el("csvBtn"),previewButton:el("previewBtn"),
+  preview:el("preview"),ctOnly:el("ctOnly")};
+const workerURL=URL.createObjectURL(new Blob([el("worker-code").textContent],{type:"text/javascript"}));
+const worker=new Worker(workerURL), database="dicom-series-indexer-v1";
+let running=false,pausedUI=false,initialized=false,lastStats=null,dbHandle=null;
+const nf=new Intl.NumberFormat("en-US");
+function appendLog(msg){const lines=view.log.textContent.split("\n");lines.push("["+new Date().toLocaleTimeString()+"] "+msg);view.log.textContent=lines.slice(-140).join("\n");view.log.scrollTop=view.log.scrollHeight}
+function openStore(){return new Promise((resolve,reject)=>{const r=indexedDB.open(database,1);r.onupgradeneeded=()=>{const db=r.result;for(const name of ["jobs","processed","sops","series"])if(!db.objectStoreNames.contains(name))db.createObjectStore(name,{keyPath:name==="jobs"?"id":"key"})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function fetchOne(db,store,key){return new Promise((resolve,reject)=>{const r=db.transaction(store,"readonly").objectStore(store).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function savedJob(){const db=dbHandle||(dbHandle=await openStore());return fetchOne(db,"jobs","active")}
+function resetButtons(){
+  view.load.disabled=running;view.resumeSaved.disabled=running||!initialized;
+  view.pause.disabled=!running||pausedUI;view.resume.disabled=!running||!pausedUI;view.stop.disabled=!running;
+  view.reindex.disabled=running;
+}
+function setUIStats(st,stage,current){
+  lastStats=st;view.processed.textContent=nf.format(st.processed||0);
+  view.total.textContent=st.total?nf.format(st.total):"–";view.series.textContent=nf.format(st.series||0);
+  view.excluded.textContent=nf.format(st.excluded||0);
+  view.errors.textContent=nf.format(st.errors||0);let percent=st.total?Math.min(100,100*(st.processed||0)/st.total):0;
+  view.bar.style.width=percent+"%";
+  view.bar.parentElement.setAttribute("aria-valuenow",String(Math.round(percent)));
+  view.stage.textContent=stage+(current?" · "+current:"");
+  view.badge.textContent=stage;
+}
+function htmlSafe(s){return String(s??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]))}
+function unique(v){return [...new Set((v||[]).filter(Boolean))]}
+function seriesPlane(s){const x=unique(s.orientations).filter(v=>v!=="unknown");return x.length===1?x[0]:x.length>1?"mixed":(s.orientations[0]||"unknown")}
+function spacing(s){
+  const plane=seriesPlane(s);const axis=plane==="axial"?2:plane==="sagittal"?0:plane==="coronal"?1:null;
+  if(axis!==null){const vals=unique((s.positions||[]).map(v=>Number(String(v).split("\\")[axis])).filter(Number.isFinite)).sort((a,b)=>a-b);
+    const dif=[];for(let i=1;i<vals.length;i++){const d=vals[i]-vals[i-1];if(d>0.01&&d<50)dif.push(d)}
+    if(dif.length){dif.sort((a,b)=>a-b);return Number(dif[Math.floor(dif.length/2)].toFixed(3))}}
+  return unique(s.spacingTags).join("; ")
+}
+function phaseWinner(s){
+  const values=Object.entries(s.phaseVotes||{});const known=values.filter(([p])=>p!=="unknown");
+  if(!known.length)return ["unknown","unknown","No reliable phase indicator"];
+  if(known.length>1)return ["mixed","low","Different phase labels found within this series: "+known.map(v=>v[0]).join(", ")];
+  const phase=known[0][0],conf=s.phaseConf[phase]||"unknown",why=s.phaseReasons[phase]||"";
+  if(values.some(([p])=>p==="unknown"))return [phase,conf,why+"; some images unclassified"];
+  return [phase,conf,why]
+}
+function isExcludedSeries(s){
+  const description=[s.desc,s.protocol].join(" ");
+  if(/(?:^|[^a-z])(?:locator|localizer|topogram|scout)(?:$|[^a-z])/i.test(description))return true;
+  if(/(?:^|[^a-z])mpr[\s_-]*cor(?:onal)?(?:$|[^a-z])/i.test(description))return true;
+  return (s.paths||[]).some(p=>/(?:^|[\/!])(?:locator|localizer|topogram|scout|mpr[\s_-]*cor(?:onal)?)(?:[\/!]|$)/i.test(p))
+}
+function toRow(s){
+  const phase=phaseWinner(s),dims=unique(s.dimensions),th=unique(s.thicknesses),px=unique(s.pixelSpacings);
+  const warn=unique(s.warn),paths=unique(s.paths);
+  if(s.acqCount!==undefined&&s.acqCount<s.nInstances)warn.push((s.nInstances-s.acqCount)+" image(s) without a usable acquisition timestamp");
+  const rowValues=unique(dims.map(x=>x.split("x")[0])),columnValues=unique(dims.map(x=>x.split("x")[1]));
+  if(paths.length>=50)warn.push("Folder path list capped at 50");
+  const modality=s.modality||"";
+  return {
+    patient_id:s.patient,study_instance_uid:s.study,study_id:s.studyId,study_date:s.studyDate,study_time:s.studyTime,
+    acquisition_datetime:s.acqFirst,acquisition_datetime_end:s.acqLast,
+    mean_acquisition_datetime:s.meanAcquisitionDateTime||"",series_instance_uid:s.series,series_number:s.seriesNum,
+    series_description:s.desc,protocol_name:s.protocol,modality:modality,slice_thickness_mm:th.join("; "),
+    slice_spacing_mm:spacing(s),orientation:seriesPlane(s),rows:rowValues.join("; "),
+    columns:columnValues.join("; "),pixel_spacing_mm:px.join("; "),
+    number_of_instances:s.nInstances,number_of_frames:s.nFrames,
+    series_folder_path:paths.join(" | "),source_archive:unique(s.archives).join(" | "),
+    contrast_agent:s.contrast,contrast_bolus_start_time:s.contrastBolusStartTime||"",
+    postcontrast_delay_seconds:s.postcontrastDelaySeconds??"",acquisition_times_count:s.acqCount||0,
+    estimated_phase:modality&&modality!=="CT"?"unknown":phase[0],
+    phase_confidence:modality&&modality!=="CT"?"unknown":phase[1],
+    phase_evidence:modality&&modality!=="CT"?"Not classified (modality is not CT)":phase[2],
+    warnings:warn.join("; ")
+  }
+}
+const columns=["patient_id","study_instance_uid","study_id","study_date","study_time","acquisition_datetime","acquisition_datetime_end","mean_acquisition_datetime","series_instance_uid","series_number","series_description","protocol_name","modality","slice_thickness_mm","slice_spacing_mm","orientation","rows","columns","pixel_spacing_mm","number_of_instances","number_of_frames","series_folder_path","source_archive","contrast_agent","contrast_bolus_start_time","postcontrast_delay_seconds","acquisition_times_count","estimated_phase","phase_confidence","phase_evidence","warnings"];
+function eachSeries(callback){return new Promise(async(resolve,reject)=>{
+  try{const db=dbHandle||(dbHandle=await openStore()),tx=db.transaction("series","readonly");
+    const r=tx.objectStore("series").openCursor();let count=0;
+    r.onsuccess=()=>{const c=r.result;if(!c){resolve(count);return}
+      try{const s=c.value;if(!isExcludedSeries(s)&&(!view.ctOnly.checked||s.modality==="CT")){callback(toRow(s));count++}c.continue()}
+      catch(e){reject(e);try{tx.abort()}catch(_){}}
+    };
+    r.onerror=()=>reject(r.error);
+  }catch(e){reject(e)}
+})}
+function csvField(v){
+  let s=String(v??"");
+  // Protect Excel/LibreOffice users against formula execution from untrusted DICOM text.
+  if(/^[=+@]/.test(s)||/^-[^0-9.]/.test(s)||/^[\t\r\n]/.test(s))s="'"+s;
+  return '"'+s.replace(/"/g,'""')+'"'
+}
+function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+async function exportCSV(){
+  view.csv.disabled=true;appendLog("Preparing CSV export…");
+  try{const lines=["\ufeff"+columns.map(csvField).join(",")];const count=await eachSeries(row=>{lines.push(columns.map(c=>csvField(row[c])).join(","))});
+    if(!count){appendLog("No series to export.");return}
+    const name="dicom-series-index-"+new Date().toISOString().slice(0,10)+".csv";
+    download(new Blob([lines.join("\r\n")+"\r\n"],{type:"text/csv;charset=utf-8"}),name);appendLog("Exported "+nf.format(count)+" series to "+name+".")
+  }catch(e){appendLog("Export failed: "+e.message)}finally{view.csv.disabled=false}
+}
+async function showPreview(){
+  const rows=[];await eachSeries(row=>{if(rows.length<15)rows.push(row)});
+  if(!rows.length){view.preview.textContent="No indexed DICOM series yet.";view.preview.style.display="block";return}
+  const cols=["patient_id","study_date","series_number","series_description","slice_thickness_mm","orientation","number_of_instances","estimated_phase","phase_confidence"];
+  view.preview.innerHTML="<table><thead><tr>"+cols.map(c=>"<th>"+htmlSafe(c)+"</th>").join("")+"</tr></thead><tbody>"+
+    rows.map(r=>"<tr>"+cols.map(c=>"<td>"+htmlSafe(r[c])+"</td>").join("")+"</tr>").join("")+"</tbody></table>";
+  view.preview.style.display="block"
+}
+async function start(root,reindex){
+  if(!("showDirectoryPicker" in window)){appendLog("This browser does not support directory selection. Try recent Chrome or Edge.");return}
+  const saved=await savedJob();
+  if(saved&&!reindex){
+    let same=false;
+    try{same=!!saved.rootHandle&&await root.isSameEntry(saved.rootHandle)}catch(_){same=false}
+    if(!same){appendLog("A different root is indexed. Enable 'Re-index everything' to replace it.");return}
+  }
+  if(saved&&reindex&&!confirm("Replace the existing local DICOM index and all saved progress?"))return;
+  running=true;pausedUI=false;initialized=true;resetButtons();view.root.textContent="Root: "+root.name;
+  appendLog("Started indexing "+root.name+(reindex?" (fresh index)":" (resume if available)")+".");
+  worker.postMessage({command:"start",root:root,reindex:reindex,rootName:root.name})
+}
+view.load.onclick=async()=>{
+  try{if(!("showDirectoryPicker" in window))throw new Error("Directory access unavailable: use Chrome or Edge.");
+    const handle=await window.showDirectoryPicker({mode:"read"});
+    await start(handle,view.reindex.checked)
+  }catch(e){if(e.name!=="AbortError")appendLog("Load failed: "+e.message)}
+};
+view.resumeSaved.onclick=async()=>{
+  try{const saved=await savedJob();if(!saved||!saved.rootHandle)throw new Error("No saved folder reference.");
+    const root=saved.rootHandle;
+    if((await root.queryPermission({mode:"read"}))!=="granted"){
+      if((await root.requestPermission({mode:"read"}))!=="granted")throw new Error("Folder permission not granted");
+    }
+    await start(root,false)
+  }catch(e){appendLog("Resume failed: "+e.message)}
+};
+view.pause.onclick=()=>{pausedUI=true;worker.postMessage({command:"pause"});resetButtons();appendLog("Pausing after the current file…")};
+view.resume.onclick=()=>{pausedUI=false;worker.postMessage({command:"resume"});resetButtons()};
+view.stop.onclick=()=>{worker.postMessage({command:"stop"});appendLog("Stopping at the next safe checkpoint…")};
+view.csv.onclick=exportCSV;view.previewButton.onclick=()=>showPreview().catch(e=>appendLog("Preview failed: "+e.message));
+worker.onmessage=event=>{
+  const m=event.data;
+  if(m.type==="log")appendLog(m.message);
+  if(m.type==="progress"){setUIStats(m.stats,m.stage,m.current);pausedUI=!!m.paused;resetButtons()}
+  if(m.type==="finished"){running=false;pausedUI=false;resetButtons();appendLog("Processing "+m.stage.toLowerCase()+".")}
+};
+worker.onerror=e=>{appendLog("Worker error: "+e.message);running=false;resetButtons()};
+async function initialize(){
+  try{
+    const saved=await savedJob();initialized=!!saved?.rootHandle;
+    if(saved){setUIStats(saved.stats,saved.stage,saved.current);view.root.textContent="Saved root: "+saved.rootName;
+      if(saved.schemaVersion!==2)appendLog("An older saved index was found. Select Re-index everything for complete injection timing and exclusion results.");
+      else appendLog("Saved index found. Select Resume saved index to continue.")}
+    else appendLog("No saved index found.");
+    if(!window.isSecureContext)appendLog("Note: this page is not a secure context; folder access and persistence may be limited.");
+    if(!("showDirectoryPicker" in window))appendLog("Use a recent version of Chrome/Edge for root-folder selection.");
+    resetButtons()
+  }catch(e){appendLog("Local storage unavailable: "+e.message)}
+}
+initialize();
+</script>
+</body>
+</html>
